@@ -105,15 +105,18 @@ public static class LzIcons {
   }
 
   // Si el icono real es pequeno dentro del lienzo, lo recorta y lo centra.
+  // Cuando el programa no trae icono grande, el shell centra uno de 32/48 px y
+  // dibuja un marco tenue en el borde: el margen se ignora para no tomarlo como contenido.
   static Bitmap Normalize(Bitmap b, int size) {
     int w = b.Width, h = b.Height, minX = w, minY = h, maxX = -1, maxY = -1;
     int stride = w * 4;
+    int m = w >= 64 && h >= 64 ? Math.Min(w, h) / 32 : 0;
     byte[] buf = new byte[stride * h];
     BitmapData d = b.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
     try { for (int y = 0; y < h; y++) Marshal.Copy(IntPtr.Add(d.Scan0, y * d.Stride), buf, y * stride, stride); }
     finally { b.UnlockBits(d); }
-    for (int y = 0; y < h; y++) {
-      for (int x = 0; x < w; x++) {
+    for (int y = m; y < h - m; y++) {
+      for (int x = m; x < w - m; x++) {
         if (buf[y * stride + x * 4 + 3] > 10) {
           if (x < minX) minX = x; if (x > maxX) maxX = x;
           if (y < minY) minY = y; if (y > maxY) maxY = y;

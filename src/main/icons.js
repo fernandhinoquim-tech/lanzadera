@@ -26,7 +26,7 @@ class IconService {
   }
 
   key(app, src) {
-    return crypto.createHash('sha1').update(JSON.stringify(['v2', app || '', src || ''])).digest('hex').slice(0, 24);
+    return crypto.createHash('sha1').update(JSON.stringify(['v3', app || '', src || ''])).digest('hex').slice(0, 24);
   }
 
   // Devuelve la ruta del PNG o null. El icono de baja resolución de respaldo se guarda

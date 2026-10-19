@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld('lanz', {
   onClip: (cb) => on('clip:changed', cb),
 
   sysStats: () => call('sys:stats'),
+  metricsSubscribe: (on) => ipcRenderer.send('metrics:subscribe', !!on),
+  metricsSnapshot: () => call('metrics:snapshot'),
+  onMetrics: (cb) => on('metrics', cb),
+  monitorResize: (h) => ipcRenderer.send('monitor:resize', h),
   suggestions: () => call('stats:suggest'),
 
   uploadIcons: () => call('icons:upload'),

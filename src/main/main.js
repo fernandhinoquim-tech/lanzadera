@@ -17,7 +17,8 @@ const { FolderWatcher } = require('./folders');
 const { Updater } = require('./updater');
 const { SearchIndex } = require('./search');
 const { createBackup } = require('./backup');
-const { DockManager, PanelWindow, SearchWindow, isWin11 } = require('./windows');
+const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11 } = require('./windows');
+const { Metrics } = require('./metrics');
 const { createTray } = require('./tray');
 const { FullscreenWatcher } = require('./fullscreen');
 const { register } = require('./ipc');
@@ -196,6 +197,8 @@ async function init() {
   ctx.docks = new DockManager(ctx.store);
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
+  ctx.metrics = new Metrics();
+  ctx.monitor = new MonitorWindows(ctx.store);
   ctx.state = state;
   ctx.broadcast = broadcast;
   ctx.toggleDock = toggleDock;
@@ -218,6 +221,7 @@ async function init() {
   ctx.clip.start();
   ctx.updater.init();
   ctx.docks.sync();
+  ctx.monitor.sync();
   ctx.tray = createTray(ctx);
   ctx.fullscreen = new FullscreenWatcher();
   ctx.fullscreen.on('change', (id) => ctx.docks.setFullscreen(id));
@@ -231,6 +235,7 @@ async function init() {
     }
     ctx.docks.sync();
     ctx.docks.setFullscreen(ctx.fullscreen.displayId);
+    ctx.monitor.sync();
     ctx.clip.apply();
     registerHotkeys();
     applyLoginItem();
@@ -276,4 +281,5 @@ app.on('before-quit', flushAll);
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   ctx.fullscreen?.stop();
+  ctx.metrics?.stop();
 });

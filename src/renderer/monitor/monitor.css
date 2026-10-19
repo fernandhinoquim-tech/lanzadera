@@ -1,0 +1,123 @@
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Monitor flotante */
+.mode-compact,
+.mode-compact body {
+  background: transparent !important;
+}
+
+.gadget {
+  margin: 6px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--popup-bg) 96%, #fff 4%), var(--popup-bg));
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.ghead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 6px 14px;
+  -webkit-app-region: drag;
+  cursor: move;
+}
+
+.ghead b {
+  flex: 1;
+  font: 600 13px var(--font-display);
+}
+
+.ghead .live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ghead .btn {
+  -webkit-app-region: no-drag;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+}
+
+.ghead .btn:hover {
+  background: var(--surface-3);
+}
+
+.ghead .btn.on {
+  color: var(--accent);
+}
+
+.gbody {
+  padding: 4px 8px 8px;
+}
+
+/* Ventana completa */
+.mode-full body {
+  background: var(--bg);
+  height: 100vh;
+  overflow: auto;
+}
+
+.mode-full.mica body {
+  background: transparent;
+}
+
+.full {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 46px 28px 28px;
+}
+
+.full h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  font: 600 26px var(--font-display);
+}
+
+.full h1 img {
+  width: 40px;
+  height: 40px;
+}
+
+.full h1 small {
+  font: 400 13px var(--font);
+  color: var(--text-3);
+  margin-left: auto;
+}
+
+.full .mdash {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.full .chart {
+  height: 110px;
+}
+
+.titlebar-drag {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 40px;
+  -webkit-app-region: drag;
+}

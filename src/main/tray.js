@@ -31,6 +31,8 @@ function createTray(ctx) {
         ].map(([edge, label]) => ({ label, type: 'radio', checked: cfg.position.edge === edge, click: () => ctx.store.patch({ position: { edge } }) })),
       },
       { type: 'separator' },
+      { label: 'Monitor de rendimiento', click: () => ctx.monitor.openFull() },
+      { label: 'Monitor flotante en el escritorio', type: 'checkbox', checked: !!cfg.monitor.gadget, click: () => ctx.store.patch({ monitor: { gadget: !cfg.monitor.gadget } }) },
       { label: 'Ordenar escritorio…', click: () => ctx.panel.open('/organizador') },
       { label: 'Configuración…', click: () => ctx.panel.open('/inicio') },
       { label: 'Buscar actualizaciones', click: () => ctx.updater.check(true) },

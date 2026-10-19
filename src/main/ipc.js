@@ -195,6 +195,15 @@ function register(ctx) {
 
   // Sistema y sugerencias
   handle('sys:stats', () => stats());
+  ipcMain.on('metrics:subscribe', (e, on) => ctx.metrics.subscribe(e.sender, !!on));
+  handle('metrics:snapshot', () => ctx.metrics.snapshot());
+  ipcMain.on('monitor:resize', (e, height) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w || w.isDestroyed() || w !== ctx.monitor.gadget) return;
+    const [width] = w.getSize();
+    const h = Math.max(120, Math.min(1200, Math.round(height)));
+    if (w.getSize()[1] !== h) w.setSize(width, h);
+  });
   handle('stats:suggest', () => usage.suggest(10));
 
   // Iconos personalizados
@@ -248,6 +257,9 @@ function register(ctx) {
         return lockComputer();
       case 'toggleDock':
         return ctx.toggleDock();
+      case 'monitor':
+        ctx.monitor.openFull();
+        return true;
       case 'clearShelf':
         return store.patch({ shelf: [] });
       case 'quit':

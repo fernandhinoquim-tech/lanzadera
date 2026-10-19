@@ -19,7 +19,8 @@
     "test": "node --test \"test/*.test.*\"",
     "gen:icons": "node scripts/gen-icon-bank.mjs",
     "dist": "electron-builder --win --x64 --publish never",
-    "release": "electron-builder --win --x64 --publish always"
+    "release": "electron-builder --win --x64 --publish always",
+    "gen:fluent": "node scripts/gen-fluent.mjs"
   },
   "build": {
     "appId": "com.lanzadera.app",
@@ -75,8 +76,10 @@
     "electron-updater": "6.8.9"
   },
   "devDependencies": {
+    "@lobehub/fluent-emoji-3d": "1.1.0",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
+    "emojibase-data": "17.0.0",
     "lucide-static": "1.48.0"
   }
 }

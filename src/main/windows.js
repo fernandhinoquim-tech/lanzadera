@@ -253,4 +253,103 @@ class SearchWindow {
   }
 }
 
-module.exports = { DockManager, PanelWindow, SearchWindow, isWin11 };
+// Monitor de rendimiento: flotante en el escritorio o en una ventana completa.
+class MonitorWindows {
+  constructor(store) {
+    this.store = store;
+    this.gadget = null;
+    this.full = null;
+    this.saveTimer = null;
+  }
+
+  sync() {
+    const m = this.store.get().monitor;
+    if (m.gadget && (!this.gadget || this.gadget.isDestroyed())) this.createGadget();
+    else if (!m.gadget && this.gadget && !this.gadget.isDestroyed()) {
+      this.closing = true;
+      this.gadget.close();
+    }
+    if (this.gadget && !this.gadget.isDestroyed()) {
+      this.gadget.setAlwaysOnTop(!!m.onTop, 'floating');
+      this.gadget.setOpacity(Math.max(0.4, Math.min(1, m.opacity || 1)));
+    }
+  }
+
+  createGadget() {
+    const m = this.store.get().monitor;
+    const area = screen.getPrimaryDisplay().workArea;
+    const w = 300;
+    let b = m.bounds;
+    const visible = b && screen.getAllDisplays().some((d) => b.x >= d.workArea.x - 50 && b.x < d.workArea.x + d.workArea.width - 50 && b.y >= d.workArea.y - 20 && b.y < d.workArea.y + d.workArea.height - 50);
+    if (!visible) b = { x: area.x + area.width - w - 24, y: area.y + 24 };
+    this.closing = false;
+    const win = new BrowserWindow({
+      x: Math.round(b.x),
+      y: Math.round(b.y),
+      width: w,
+      height: 560,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      hasShadow: false,
+      alwaysOnTop: !!m.onTop,
+      show: false,
+      title: 'Monitor de rendimiento',
+      type: process.platform === 'win32' ? 'toolbar' : undefined,
+      webPreferences: webPrefs(),
+    });
+    hardenWebContents(win.webContents);
+    win.loadURL(`${APP_URL}/monitor/index.html?mode=compact`);
+    win.once('ready-to-show', () => win.showInactive());
+    win.on('moved', () => {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => {
+        if (win.isDestroyed()) return;
+        const { x, y } = win.getBounds();
+        this.store.patch({ monitor: { bounds: { x, y } } });
+      }, 400);
+    });
+    win.on('closed', () => {
+      this.gadget = null;
+      if (!this.closing && this.store.get().monitor.gadget) this.store.patch({ monitor: { gadget: false } });
+    });
+    this.gadget = win;
+  }
+
+  openFull() {
+    if (this.full && !this.full.isDestroyed()) {
+      this.full.show();
+      this.full.focus();
+      return this.full;
+    }
+    const dark = nativeTheme.shouldUseDarkColors;
+    const win11 = isWin11();
+    this.full = new BrowserWindow({
+      width: 1060,
+      height: 800,
+      minWidth: 720,
+      minHeight: 560,
+      show: false,
+      title: 'Monitor de rendimiento',
+      icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
+      backgroundColor: win11 ? '#00000000' : dark ? '#1c1c1f' : '#f3f3f5',
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: '#00000000', symbolColor: dark ? '#ffffff' : '#1a1a1a', height: 40 },
+      backgroundMaterial: win11 ? 'mica' : undefined,
+      autoHideMenuBar: true,
+      webPreferences: webPrefs(),
+    });
+    hardenWebContents(this.full.webContents);
+    this.full.loadURL(`${APP_URL}/monitor/index.html?mode=full`);
+    this.full.once('ready-to-show', () => this.full.show());
+    this.full.on('closed', () => (this.full = null));
+    return this.full;
+  }
+}
+
+module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11 };

@@ -1,6 +1,6 @@
 // Páginas: Inicio, Apariencia, Posición, Comportamiento, Widgets, Iconos, Respaldo y Acerca de.
 import { h, esc, debounce } from '../shared/dom.js';
-import { iconHTML, customUrl } from '../shared/icon-view.js';
+import { iconHTML, customUrl, fluentUrl } from '../shared/icon-view.js';
 import { tileSVG, gradientColors, TILE_STYLES, glyphSVG } from '../shared/tiles.js';
 import { CATEGORY_NAMES, iconsInCategory, searchIcons } from '../shared/icon-es.js';
 import { LUCIDE_VERSION } from '../shared/icon-bank.js';
@@ -20,6 +20,10 @@ function tile(glyph, gradient, style, size) {
   return tileSVG({ glyph, colors: gradientColors(gradient), style: style || ap().tileStyle, shape: ap().tileShape, size });
 }
 
+function fl(code) {
+  return `<img class="ico-img fluent" src="${fluentUrl(code)}" alt="">`;
+}
+
 function hk(name) {
   const v = P.config.hotkeys[name];
   return v ? v.replace(/Control/g, 'Ctrl').replace(/Space/g, 'Espacio').replace(/Shift/g, 'Mayús').replace(/\+/g, ' + ') : 'Sin atajo';
@@ -37,8 +41,8 @@ export function homePage() {
   if (env.hotkeys?.searchFallback)
     banners.push(h('div.banner', h('span', { html: gl('info') }), h('div.grow', { text: `Alt + Espacio está ocupado por otro programa; el buscador usa ${env.hotkeys.searchFallback.replace('Control', 'Ctrl')}.` })));
 
-  const q = (glyph, grad, title, text, route, fn) => {
-    const el = h('div.qcard', { html: `<span class="qi">${tile(glyph, grad, 'fluent')}</span><b>${esc(title)}</b><span>${esc(text)}</span>` });
+  const q = (code, title, text, route, fn) => {
+    const el = h('div.qcard', { html: `<span class="qi">${fl(code)}</span><b>${esc(title)}</b><span>${esc(text)}</span>` });
     el.addEventListener('click', fn || (() => P.navigate(route)));
     return el;
   };
@@ -50,12 +54,12 @@ export function homePage() {
     h('div.hero', h('img', { src: 'lanz://asset/icon.png', alt: '', onerror: (e) => (e.target.style.display = 'none') }),
       h('div', h('h2', { text: saludo() }), h('p', { html: `Estás usando el espacio <b>${esc(ws?.name || '')}</b> con ${ws?.items.length || 0} elementos. Pasa el mouse por tu dock para agrandarlo.` }))),
     h('div.qgrid',
-      q('layout-grid', 'aurora', 'Elementos', 'Agrega programas, carpetas, grupos y widgets.', '/elementos'),
-      q('palette', 'atardecer', 'Iconos', 'Banco de 1.850 iconos, 7 estilos o sube los tuyos.', '/iconos'),
-      q('move', 'oceano', 'Posición', 'Abajo, arriba o a los lados; modo compacto o mini.', '/posicion'),
-      q('layers', 'violeta', 'Espacios', 'Un dock para cada actividad.', '/espacios'),
-      q('wand-sparkles', 'menta', 'Ordenar escritorio', 'Acomoda archivos sueltos por tipo, con deshacer.', '/organizador'),
-      q('search', 'indigo', 'Buscador', `Pulsa ${hk('search')} en cualquier momento.`, null, () => api.openSearch())
+      q('1f5c3-fe0f', 'Elementos', 'Agrega programas, carpetas, grupos y widgets.', '/elementos'),
+      q('1f3a8', 'Iconos', '1.238 iconos 3D, 1.850 de línea, o sube los tuyos.', '/iconos'),
+      q('1f4c8', 'Monitor de rendimiento', 'CPU, memoria, gráfica, red y disco en vivo.', null, () => api.run('monitor')),
+      q('1f5c2-fe0f', 'Espacios', 'Un dock para cada actividad.', '/espacios'),
+      q('1fa84', 'Ordenar escritorio', 'Acomoda archivos sueltos por tipo, con deshacer.', '/organizador'),
+      q('1f50d', 'Buscador', `Pulsa ${hk('search')} en cualquier momento.`, null, () => api.openSearch())
     ),
     ...section('Atajos útiles',
       card({ icon: 'keyboard', title: 'Teclado y mouse', col: true, control: h('div.keys', { html: [
@@ -125,6 +129,8 @@ export function appearancePage() {
       card({ icon: 'tag', title: 'Nombres de los iconos', control: seg([['hover', 'Al pasar'], ['always', 'Siempre'], ['never', 'Nunca']], a.labels, (v) => set({ labels: v })) })
     ),
     ...section('Iconos',
+      card({ icon: 'box', title: 'Tipo de iconos de diseño', desc: 'Para carpetas, widgets, acciones y programas sin icono propio.', col: true, control: packPicks() }),
+      a.iconPack !== 'glyph' ? card({ icon: 'square', title: 'Fondo de los iconos 3D', control: seg([['none', 'Objeto libre'], ['tile', 'Sobre mosaico']], a.fluentBg || 'none', (v) => set({ fluentBg: v })) }) : null,
       card({ icon: 'app-window', title: 'Iconos de los programas', col: true, control: mode }),
       card({ icon: 'palette', title: 'Estilo de los iconos de diseño', desc: 'Se aplica a carpetas, widgets, grupos y a los iconos del banco que no tengan un estilo propio.', col: true, control: styles }),
       card({ icon: 'shapes', title: 'Forma', control: seg([['squircle', 'Squircle'], ['rounded', 'Redondeada'], ['circle', 'Círculo']], a.tileShape, (v) => set({ tileShape: v })) }),
@@ -135,6 +141,21 @@ export function appearancePage() {
       card({ icon: 'arrow-up-from-line', title: 'Rebote al abrir un programa', control: toggle(a.bounce, (v) => set({ bounce: v })) })
     )
   );
+}
+
+function packPicks() {
+  const a = ap();
+  const box = h('div.picks', { style: { gridTemplateColumns: '1fr 1fr' } });
+  const opts = [
+    ['fluent3d', 'Iconos 3D', 'Objetos en 3D al estilo de Windows 11, con luz y sombra.', ['1f4c1', '1f310', '1f3b5', '1f3ae'].map(fl).join('')],
+    ['glyph', 'Iconos de línea', 'Símbolos limpios sobre mosaicos de color.', SAMPLE.map((x) => tile(x.glyph, x.gradient)).join('')],
+  ];
+  for (const [v, t, d, pv] of opts) {
+    const p = h('div.pick' + ((a.iconPack || 'fluent3d') === v ? '.on' : ''), { html: `<div class="pv">${pv.replace(/(<img[^>]*>|<svg[\s\S]*?<\/svg>)/g, '<span>$1</span>')}</div><b>${t}</b><small>${d}</small>` });
+    p.addEventListener('click', () => patch({ appearance: { iconPack: v } }));
+    box.append(p);
+  }
+  return box;
 }
 
 // ---------- Posición ----------
@@ -247,9 +268,30 @@ export function behaviorPage() {
 // ---------- Widgets ----------
 export function widgetsPage() {
   const c = P.config;
+  const m = c.monitor;
+  const addWidget = async (w, name) => {
+    const ws = activeWs();
+    if (ws.items.some((i) => i.type === 'widget' && i.widget === w)) return toast(`«${name}» ya está en el dock`);
+    await api.setItems(ws.id, [...JSON.parse(JSON.stringify(ws.items)), { id: Math.random().toString(36).slice(2, 12), type: 'widget', widget: w, name }]);
+    toast(`«${name}» agregado al dock`);
+  };
+  const chips = h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+    ...[['cpu', 'Procesador', '1f4bb'], ['ram', 'Memoria', '1f4df'], ['gpu', 'Tarjeta gráfica', '1f3ae'], ['net', 'Red', '1f6dc'], ['disk', 'Disco', '1f4be'], ['system', 'Anillos', '1f4c8']].map(([w, n, code]) => {
+      const b = h('button.btn', { html: `<img src="${fluentUrl(code)}" alt="" style="width:20px;height:20px"> ${esc(n)}` });
+      b.addEventListener('click', () => addWidget(w, n));
+      return b;
+    })
+  );
   return page(
     'Widgets',
     'Pequeñas herramientas que viven en tu dock. Agrégalas desde Elementos › Agregar › Widgets.',
+    ...section('Monitor de rendimiento',
+      card({ icon: 'activity', title: 'Abrir el monitor completo', desc: 'Procesador por núcleo, memoria, tarjeta gráfica, red, disco, temperaturas, batería y programas que más consumen.', control: button('Abrir', () => api.run('monitor'), { primary: true, icon: 'maximize-2' }) }),
+      card({ icon: 'picture-in-picture-2', title: 'Monitor flotante en el escritorio', desc: 'Una tarjeta con gráficas en vivo que puedes mover a cualquier parte de la pantalla.', control: toggle(m.gadget, (v) => patch({ monitor: { gadget: v } })) }),
+      card({ icon: 'pin', title: 'Mantenerlo encima de las ventanas', control: toggle(m.onTop, (v) => patch({ monitor: { onTop: v } })) }),
+      card({ icon: 'blend', title: 'Transparencia del monitor flotante', control: slider({ min: 0.4, max: 1, step: 0.02, value: m.opacity, format: (v) => Math.round(v * 100) + ' %', onChange: (v) => patch({ monitor: { opacity: v } }) }) }),
+      card({ icon: 'plus', title: 'Agregar al dock', desc: 'Cada widget muestra su valor y una gráfica en vivo; al hacer clic abre el panel de rendimiento.', col: true, control: chips })
+    ),
     ...section('Portapapeles',
       card({ icon: 'clipboard-list', title: 'Guardar historial de lo que copias', desc: 'Respeta los gestores de contraseñas que piden no ser registrados.', control: toggle(c.clipboard.enabled, (v) => patch({ clipboard: { enabled: v } })) }),
       card({ icon: 'list-ordered', title: 'Cuántos recordar', control: slider({ min: 10, max: 200, step: 5, value: c.clipboard.max, onChange: (v) => patch({ clipboard: { max: v } }) }) }),

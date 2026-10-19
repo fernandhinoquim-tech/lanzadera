@@ -82,19 +82,21 @@ class SearchIndex {
 
     if (process.platform === 'win32') {
       for (const [title, uri, kw] of WIN_SETTINGS)
-        push({ key: 'set:' + uri, kind: 'setting', title, subtitle: 'Configuración de Windows', keywords: kw, item: { type: 'url', name: title, target: 'ms-settings:' + uri, icon: { kind: 'designed', glyph: 'settings', gradient: 'grafito' } } });
-      push({ key: 'set:defender', kind: 'setting', title: 'Seguridad de Windows', subtitle: 'Antivirus y protección', keywords: 'defender antivirus', item: { type: 'url', name: 'Seguridad de Windows', target: 'windowsdefender:', icon: { kind: 'designed', glyph: 'shield-check', gradient: 'esmeralda' } } });
+        push({ key: 'set:' + uri, kind: 'setting', title, subtitle: 'Configuración de Windows', keywords: kw, item: { type: 'url', name: title, target: 'ms-settings:' + uri, icon: { kind: 'fluent', code: '2699-fe0f', glyph: 'settings', gradient: 'grafito' } } });
+      push({ key: 'set:defender', kind: 'setting', title: 'Seguridad de Windows', subtitle: 'Antivirus y protección', keywords: 'defender antivirus', item: { type: 'url', name: 'Seguridad de Windows', target: 'windowsdefender:', icon: { kind: 'fluent', code: '1f6e1-fe0f', glyph: 'shield-check', gradient: 'esmeralda' } } });
     }
 
-    const cmd = (key, title, subtitle, glyph, gradient, keywords = '') => out.push({ key: 'cmd:' + key, kind: 'command', command: key, title, subtitle, keywords, item: { type: 'action', name: title, icon: { kind: 'designed', glyph, gradient } } });
-    cmd('organize', 'Ordenar escritorio', 'Lanzadera · organiza archivos sueltos por tipo', 'wand-sparkles', 'aurora', 'organizar limpiar acomodar');
-    cmd('settings', 'Configuración de Lanzadera', 'Apariencia, posición, atajos…', 'settings', 'grafito', 'ajustes preferencias opciones dock');
-    cmd('icons', 'Banco de iconos', 'Lanzadera · elige o sube iconos', 'palette', 'atardecer', 'iconos diseno');
-    cmd('showDesktop', 'Mostrar escritorio', 'Minimiza todas las ventanas', 'monitor', 'cielo', 'minimizar');
-    cmd('lock', 'Bloquear equipo', 'Windows + L', 'lock', 'medianoche', 'bloquear pantalla');
-    cmd('toggleDock', 'Mostrar u ocultar el dock', 'Lanzadera', 'panel-bottom', 'indigo', 'barra');
-    cmd('clearShelf', 'Vaciar estante', 'Lanzadera · quita los archivos del estante', 'inbox', 'menta');
-    for (const ws of cfg.workspaces) cmd('ws:' + ws.id, `Cambiar a «${ws.name}»`, 'Espacio de trabajo', ws.icon?.glyph || 'layers', ws.icon?.gradient || 'violeta', 'espacio workspace');
+    const cmd = (key, title, subtitle, glyph, gradient, fluent, keywords = '') =>
+      out.push({ key: 'cmd:' + key, kind: 'command', command: key, title, subtitle, keywords, item: { type: 'action', name: title, icon: fluent ? { kind: 'fluent', code: fluent, glyph, gradient } : { kind: 'designed', glyph, gradient } } });
+    cmd('organize', 'Ordenar escritorio', 'Lanzadera · organiza archivos sueltos por tipo', 'wand-sparkles', 'aurora', '1fa84', 'organizar limpiar acomodar');
+    cmd('monitor', 'Monitor de rendimiento', 'CPU, memoria, gráfica, red y disco en vivo', 'activity', 'medianoche', '1f4c8', 'rendimiento cpu ram memoria gpu red disco temperatura');
+    cmd('settings', 'Configuración de Lanzadera', 'Apariencia, posición, atajos…', 'settings', 'grafito', '2699-fe0f', 'ajustes preferencias opciones dock');
+    cmd('icons', 'Banco de iconos', 'Lanzadera · elige o sube iconos', 'palette', 'atardecer', '1f3a8', 'iconos diseno');
+    cmd('showDesktop', 'Mostrar escritorio', 'Minimiza todas las ventanas', 'monitor', 'cielo', '1f5a5-fe0f', 'minimizar');
+    cmd('lock', 'Bloquear equipo', 'Windows + L', 'lock', 'medianoche', '1f512', 'bloquear pantalla');
+    cmd('toggleDock', 'Mostrar u ocultar el dock', 'Lanzadera', 'panel-bottom', 'indigo', '1f6e0-fe0f', 'barra');
+    cmd('clearShelf', 'Vaciar estante', 'Lanzadera · quita los archivos del estante', 'inbox', 'menta', '1f9fa');
+    for (const ws of cfg.workspaces) cmd('ws:' + ws.id, `Cambiar a «${ws.name}»`, 'Espacio de trabajo', ws.icon?.glyph || 'layers', ws.icon?.gradient || 'violeta', ws.icon?.fluent, 'espacio workspace');
 
     if (cfg.behavior.fileSearch) {
       this.scanFiles();

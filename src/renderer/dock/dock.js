@@ -4,7 +4,7 @@ import { iconHTML, installIconFallbacks } from '../shared/icon-view.js';
 import { S, api, ap, isVertical, findItem, saveItems, toast } from './core.js';
 import { openMenu, closeMenu, menuOpen } from './menu.js';
 import { closePopup, popupOpen, popupItemId, popupIsHover, openPopup, refreshIfShowing } from './popups.js';
-import { widgetTile, refreshSystem } from './widgets.js';
+import { widgetTile, METRIC_WIDGETS } from './widgets.js';
 import { itemMenu, dockMenu, activate, hasPopup, addItems, updateItem } from './actions.js';
 
 const stage = document.getElementById('stage');
@@ -106,8 +106,20 @@ function render() {
   watchFolders();
   updateBadges();
   layoutHandle();
+  metricsDemand();
   refreshHit();
 }
+
+// Pide datos de rendimiento solo si hay widgets o el panel de rendimiento está abierto.
+let metricsOn = false;
+function metricsDemand() {
+  const want = !!S.hooks.dashboard || (S.ws?.items || []).some((i) => i.type === 'widget' && METRIC_WIDGETS.has(i.widget)) || (S.ws?.items || []).some((i) => i.type === 'action' && i.action === 'monitor');
+  if (want !== metricsOn) {
+    metricsOn = want;
+    api.metricsSubscribe(want);
+  }
+}
+S.hooks.metricsDemand = metricsDemand;
 
 // Reduce el tamaño si los iconos no caben a lo largo del borde.
 function fitSize(items) {
@@ -831,9 +843,10 @@ window.__lzTest = {
 
 // ---------- Arranque ----------
 
-function refreshWidgets() {
+function refreshWidgets(metricsOnly = false) {
   for (const { item, el } of els) {
-    if (item.type !== 'widget' || (item.widget !== 'clock' && item.widget !== 'system')) continue;
+    if (item.type !== 'widget') continue;
+    if (metricsOnly ? !METRIC_WIDGETS.has(item.widget) : item.widget !== 'clock' && !METRIC_WIDGETS.has(item.widget)) continue;
     const ico = el.querySelector('.ico');
     if (ico) ico.innerHTML = widgetTile(item);
   }
@@ -852,13 +865,11 @@ async function boot() {
   });
   computeStackBadges();
   setInterval(refreshWidgets, 10000);
-  setInterval(async () => {
-    if (els.some((x) => x.item.type === 'widget' && x.item.widget === 'system')) {
-      await refreshSystem();
-      refreshWidgets();
-    }
-  }, 3000);
-  refreshSystem().then(refreshWidgets);
+  api.onMetrics((m) => {
+    S.metrics = m;
+    refreshWidgets(true);
+    S.hooks.dashboard?.update(m);
+  });
   window.addEventListener('resize', () => {
     renderKey = '';
     setState(S.state);

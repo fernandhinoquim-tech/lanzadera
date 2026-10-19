@@ -74,6 +74,29 @@ const mockScript = (state) => `
     orgUndo: async () => ({ restored: 10, failed: [] }),
     clipList: async () => ({ enabled: true, paused: false, items: [{ id: 'c1', text: 'https://github.com/fernandhinoquim-tech/lanzadera', ts: now - 60e3, pinned: true }, { id: 'c2', text: 'Reunión con el equipo el martes a las 10:00 en la sala 3', ts: now - 600e3 }, { id: 'c3', text: 'fernando@ejemplo.com', ts: now - 7200e3 }] }),
     clipCopy: async () => true, clipPin: async () => true, clipRemove: async () => true, clipClear: async () => true, clipPause: async () => true, onClip: on('clip'),
+    metricsSubscribe: (on) => {
+      if (!on || window.__mt) return;
+      const hist = { cpu: [], mem: [], gpu: [], rx: [], tx: [], dr: [], dw: [] };
+      let k = 0;
+      const gen = () => {
+        k++;
+        const w = (a, b, f) => a + (b - a) * (0.5 + 0.5 * Math.sin(k / f + a));
+        const now = { t: Date.now(), cpu: Math.round(w(12, 48, 3)), cores: Array.from({ length: 12 }, (_, i) => Math.round(w(5, 90, 2 + i))), cpuModel: 'Intel(R) Core(TM) i7-12700H', mem: Math.round(w(55, 63, 9)), memUsed: 10.2e9, memTotal: 16e9,
+          gpu: { util: Math.round(w(4, 38, 4)), mem: 2.1e9, memTotal: 6e9, name: 'NVIDIA GeForce RTX 3060 Laptop GPU', temp: 54, fan: 31, power: 23 },
+          net: { rx: w(2e4, 3.2e6, 2.5), tx: w(5e3, 4e5, 3) }, netTotals: { rx: 1.8e9, tx: 2.3e8 }, disk: { r: w(0, 4e7, 2), w: w(0, 1.5e7, 3.5), busy: Math.round(w(1, 22, 3)) },
+          mhz: 3480, temps: [62], battery: { pct: 78, ac: false, secs: 11800 }, uptime: 93000, host: 'PC-FERNANDO',
+          drives: [{ name: 'C:', label: 'Windows', total: 512e9, free: 201e9 }, { name: 'D:', label: 'Datos', total: 1e12, free: 80e9 }],
+          procs: { count: 241, cpu: [['chrome', 12.4, 1.9e9], ['Code', 6.1, 8e8], ['explorer', 2.2, 1.6e8], ['Spotify', 1.8, 3.1e8], ['Teams', 1.1, 6.4e8], ['Lanzadera', 0.6, 1.4e8]], mem: [] } };
+        for (const [kk, v] of [['cpu', now.cpu], ['mem', now.mem], ['gpu', now.gpu.util], ['rx', now.net.rx], ['tx', now.net.tx], ['dr', now.disk.r], ['dw', now.disk.w]]) { hist[kk].push(v); if (hist[kk].length > 90) hist[kk].shift(); }
+        window.__mlast = { now, hist };
+        emit('metrics', window.__mlast);
+      };
+      for (let i = 0; i < 60; i++) gen();
+      window.__mt = setInterval(gen, 1000);
+    },
+    metricsSnapshot: async () => window.__mlast || null,
+    onMetrics: on('metrics'),
+    monitorResize: () => {},
     sysStats: async () => ({ cpu: 23, mem: 61, memUsed: 9.8e9, memTotal: 16e9, disk: { total: 512e9, free: 201e9, root: 'C:\\\\' }, uptime: 93000, cpuModel: 'Intel(R) Core(TM) i7-1255U', cores: 12 }),
     suggestions: async () => state.config.workspaces[0].items.filter((i) => i.type === 'app').slice(0, 4),
     uploadIcons: async () => [], importIcons: async () => [], deleteIcon: async () => true, clearIconCache: async () => true, onIconsRefresh: on('icons'),
@@ -132,6 +155,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         if (opts.click) for (const c of [].concat(opts.click)) { await page.click(c); await wait(500); }
         if (opts.scroll) { await page.evaluate((y) => (document.getElementById('content').scrollTop = y), opts.scroll); await wait(300); }
         await page.screenshot({ path: path.join(out, (opts.name || 'panel') + '.png') });
+        await page.close();
+      } else if (kind === 'monitor') {
+        const opts = arg ? JSON.parse(arg) : {};
+        const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 320, h: opts.h || 700, dark: opts.dark !== false, patch: opts.patch || {} });
+        await page.evaluate(() => window.lanz.metricsSubscribe(true));
+        await wait(1500);
+        await page.screenshot({ path: path.join(out, (opts.name || 'monitor') + '.png'), omitBackground: true });
         await page.close();
       } else if (kind === 'search') {
         const opts = arg ? JSON.parse(arg) : {};

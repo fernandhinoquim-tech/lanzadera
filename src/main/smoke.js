@@ -84,10 +84,16 @@ async function run(ctx) {
   await step('grupo', () => openByType({ type: 'group' }, '03-grupo'));
   await step('abanico-descargas', () => openByType({ type: 'folderStack', layout: 'fan' }, '04-abanico'));
   await step('calendario', () => openByType({ type: 'widget', widget: 'clock' }, '05-calendario'));
-  await step('rendimiento', () => openByType({ type: 'widget', widget: 'system' }, '06-rendimiento', 2200));
-  await step('notas', () => openByType({ type: 'widget', widget: 'notes' }, '07-notas'));
+  await step('portapapeles', () => openByType({ type: 'widget', widget: 'clipboard' }, '07-portapapeles'));
   await step('espacios', () => openByType({ type: 'action', action: 'workspaces' }, '08-espacios'));
   await step('ordenar-rapido', () => openByType({ type: 'action', action: 'organize' }, '09-ordenar', 1500));
+  await step('panel-rendimiento', async () => {
+    await dockEval('window.__lzTest.open({ type: "widget", widget: "cpu" })');
+    await wait(3500);
+    await shot(dockWin(), '09b-rendimiento');
+    await dockEval('window.__lzTest.close()');
+    await wait(250);
+  });
   await step('menu', async () => {
     await dockEval('window.__lzTest.menu()');
     await wait(400);
@@ -122,6 +128,34 @@ async function run(ctx) {
   });
   ctx.store.replace(cfg0);
   await wait(800);
+
+  // Monitor de rendimiento
+  await step('metricas', async () => {
+    ctx.metrics.start();
+    await wait(process.platform === 'win32' ? 9000 : 3500);
+    const snap = ctx.metrics.snapshot();
+    if (!snap) throw new Error('Sin muestras de rendimiento');
+    const n = snap.now;
+    const info = { cpu: n.cpu, cores: n.cores.length, mem: n.mem, gpu: n.gpu, net: n.net, disk: n.disk, mhz: n.mhz, temps: n.temps, battery: n.battery, drives: n.drives, procs: n.procs && { count: n.procs.count, top: n.procs.cpu?.slice(0, 3) }, samplerError: ctx.metrics.lastError };
+    if (process.platform === 'win32' && !n.net && !n.disk) throw new Error('El recolector de Windows no envió datos: ' + JSON.stringify(info));
+    return info;
+  });
+  await step('monitor-flotante', async () => {
+    ctx.store.patch({ monitor: { gadget: true } });
+    await wait(3500);
+    const w = ctx.monitor.gadget;
+    if (!w) throw new Error('No se abrió el monitor flotante');
+    await shot(w, '15-monitor-flotante');
+    ctx.store.patch({ monitor: { gadget: false } });
+    await wait(500);
+  });
+  await step('monitor-completo', async () => {
+    const w = ctx.monitor.openFull();
+    await waitLoad(w);
+    await wait(3000);
+    await shot(w, '16-monitor-completo');
+    w.close();
+  });
 
   // Panel de configuración
   const routes = ['/bienvenida', '/inicio', '/elementos', '/apariencia', '/posicion', '/comportamiento', '/espacios', '/iconos', '/organizador', '/widgets', '/respaldo', '/acerca', '/agregar'];

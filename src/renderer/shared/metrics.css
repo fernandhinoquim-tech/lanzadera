@@ -1,0 +1,278 @@
+/* Monitor de rendimiento */
+.mdash {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mdash.mode-compact {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.mcard {
+  position: relative;
+  border-radius: 14px;
+  padding: 12px 14px 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--text) 7%, transparent), color-mix(in srgb, var(--text) 2.5%, transparent));
+  border: 1px solid var(--border);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.mcard::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  opacity: 0.9;
+}
+
+.mcard.wide {
+  grid-column: 1 / -1;
+}
+
+.m-cpu { --c1: #22d3ee; --c2: #3b82f6; }
+.m-mem { --c1: #c084fc; --c2: #7c3aed; }
+.m-gpu { --c1: #86efac; --c2: #16a34a; }
+.m-net { --c1: #fda4af; --c2: #f43f5e; }
+.m-disk { --c1: #67e8f9; --c2: #db2777; }
+.m-procs { --c1: #fde68a; --c2: #f59e0b; }
+.m-sys { --c1: #a5b4fc; --c2: #6366f1; }
+
+.mhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.micon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.mtitle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mtitle b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.msub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mval {
+  font: 700 24px var(--font-display);
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  white-space: nowrap;
+}
+
+.mval small {
+  font-size: 14px;
+  margin-left: 1px;
+}
+
+.m-net .mval {
+  font-size: 18px;
+}
+
+.down {
+  color: #fb7185;
+  -webkit-text-fill-color: #fb7185;
+  margin-right: 3px;
+}
+
+.up {
+  color: #fbbf24;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: 84px;
+  color: var(--text);
+}
+
+.mode-compact .chart {
+  height: 46px;
+}
+
+.mode-compact .mcard {
+  padding: 10px 12px 8px;
+}
+
+.mode-compact .mhead {
+  margin-bottom: 4px;
+}
+
+.mode-compact .mval {
+  font-size: 20px;
+}
+
+.mode-compact .micon {
+  width: 26px;
+  height: 26px;
+}
+
+.mbar {
+  height: 6px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+  margin: 8px 0 2px;
+}
+
+.mbar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s var(--ease);
+}
+
+.mrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+}
+
+.mkv {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-3);
+  min-width: 0;
+}
+
+.mrow .mkv {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mkv b {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.cores {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 30px;
+  margin-top: 8px;
+}
+
+.cores i {
+  flex: 1;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(to top, #3b82f6 0, #22d3ee var(--v), color-mix(in srgb, var(--text) 9%, transparent) var(--v));
+  transition: background 0.5s;
+}
+
+.drives {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.drive .mbar {
+  margin-top: 4px;
+}
+
+.plist {
+  display: grid;
+  gap: 6px;
+}
+
+.prow {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.4fr) 2fr 56px 70px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.prow .mbar {
+  margin: 0;
+}
+
+.prow b {
+  text-align: right;
+  font-weight: 600;
+}
+
+.pname {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pmem {
+  color: var(--text-3);
+  text-align: right;
+  font-size: 11.5px;
+}
+
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.sitem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.ring-svg {
+  width: 64px;
+  height: 64px;
+  color: var(--text);
+}
+
+.sinfo {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mna {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 8px 0;
+}
+
+.mcard.na .mval {
+  color: var(--text-3);
+  background: none;
+}

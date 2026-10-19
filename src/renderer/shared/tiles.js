@@ -176,7 +176,7 @@ export function tileSVG(o = {}) {
 
   const big = style === 'minimal';
   let content = '';
-  if (o.content) {
+  if (o.content !== undefined) {
     content = o.content.replace(/currentColor/g, fg);
   } else if (o.image) {
     const fit = o.imageFit || 'tile';

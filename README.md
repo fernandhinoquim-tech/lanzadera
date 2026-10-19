@@ -29,9 +29,11 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | 🧩 | **Espacios de trabajo** | Un dock distinto para *Trabajo*, *Estudio*, *Ocio*… Cambia con `Ctrl + Alt + 1…9` o la rueda del mouse. |
 | ⚡ | **Buscador rápido** | `Alt + Espacio`: apps, archivos, ajustes de Windows, comandos y **cuentas** (`80*15%`). `Ctrl + P` fija el resultado. |
 | ✨ | **Ordenar escritorio** | Acomoda los archivos sueltos en carpetas por tipo (Imágenes, PDF, Música…). Muestra una vista previa y **siempre se puede deshacer**. |
-| 🎨 | **Iconos de diseño** | Banco de 1.850 iconos con búsqueda en español, 7 estilos (Degradado, Brillante 3D, Vidrio, Neón, Pastel, Sólido, Mínimo), 19 degradados, colores propios, emoji, letras, o **tus propias imágenes**. |
+| 🎨 | **Iconos 3D** | 1.238 iconos 3D al estilo de Windows 11 (Fluent de Microsoft) con buscador en español, como objeto libre o sobre mosaico. |
+| ✏️ | **Iconos de línea** | Banco de 1.850 iconos con 7 estilos (Degradado, Brillante 3D, Vidrio, Neón, Pastel, Sólido, Mínimo), 19 degradados, colores propios, emoji, letras, o **tus propias imágenes**. |
+| 📈 | **Monitor de rendimiento** | Widgets con gráfica en vivo (CPU, RAM, gráfica, red, disco), panel completo con núcleos, velocidad real, temperatura, memoria de video, unidades, batería y programas que más consumen, y un **monitor flotante** para el escritorio. |
 | 🖼️ | **Iconos originales en HD** | Los iconos de tus programas se extraen de Windows a 256 px para que se vean nítidos al agrandarse. |
-| ⏰ | **Widgets** | Reloj con calendario, rendimiento (CPU, memoria, disco, batería), historial del portapapeles y notas rápidas. |
+| ⏰ | **Widgets** | Reloj con calendario, historial del portapapeles y notas rápidas. |
 | 🤖 | **Sugerencias** | El icono «Sugeridas» aprende qué programas usas a cada hora. |
 | 🗑️ | **Papelera** | Suelta archivos sobre ella para borrarlos (van a la Papelera de reciclaje). |
 | 💾 | **Copia de seguridad** | Exporta e importa toda tu configuración, incluidas tus imágenes. |

@@ -1,7 +1,7 @@
 // Páginas: Organizador de escritorio y Bienvenida.
 import { h, esc, formatSize, timeAgo } from '../shared/dom.js';
 import { tileSVG, gradientColors, TILE_STYLES } from '../shared/tiles.js';
-import { iconHTML } from '../shared/icon-view.js';
+import { iconHTML, fluentUrl } from '../shared/icon-view.js';
 import { P, api, ap, patch, activeWs } from './ctx.js';
 import { page, section, card, toggle, seg, button, toast, confirmDialog, gl } from './ui.js';
 
@@ -224,23 +224,23 @@ export function welcomePage() {
     step = n;
     P.rerender();
   };
-  const T = (glyph, grad) => tileSVG({ glyph, colors: gradientColors(grad), style: 'fluent', shape: 'squircle' });
+  const T = (glyph, grad, code) => (code ? `<img class="ico-img fluent" src="${fluentUrl(code)}" alt="">` : tileSVG({ glyph, colors: gradientColors(grad), style: 'fluent', shape: 'squircle' }));
   const box = h('div.welcome');
 
   if (step === 0) {
     const feats = [
-      ['zoom-in', 'oceano', 'Efecto lupa', 'Los iconos crecen al pasar el mouse.'],
-      ['layout-grid', 'aurora', 'Grupos', 'Un icono que abre muchos más, en abanico o cuadrícula.'],
-      ['layers', 'violeta', 'Espacios', 'Un dock para Trabajo, otro para Ocio…'],
-      ['search', 'indigo', 'Buscador', 'Alt + Espacio: apps, archivos, ajustes y cuentas.'],
-      ['wand-sparkles', 'menta', 'Ordena tu escritorio', 'Archivos sueltos a carpetas, con deshacer.'],
-      ['palette', 'atardecer', 'Iconos bonitos', '1.850 iconos de diseño, 7 estilos o los tuyos.'],
+      ['zoom-in', 'oceano', 'Efecto lupa', 'Los iconos crecen al pasar el mouse.', '1f50e'],
+      ['layout-grid', 'aurora', 'Grupos', 'Un icono que abre muchos más, en abanico o cuadrícula.', '1f5c3-fe0f'],
+      ['layers', 'violeta', 'Espacios', 'Un dock para Trabajo, otro para Ocio…', '1f5c2-fe0f'],
+      ['search', 'indigo', 'Buscador', 'Alt + Espacio: apps, archivos, ajustes y cuentas.', '1f50d'],
+      ['wand-sparkles', 'menta', 'Ordena tu escritorio', 'Archivos sueltos a carpetas, con deshacer.', '1fa84'],
+      ['activity', 'atardecer', 'Monitor del PC', 'CPU, memoria, gráfica, red y disco en vivo.', '1f4c8'],
     ];
     box.append(
       h('img.wlogo', { src: 'lanz://asset/icon.png', alt: '', onerror: (e) => (e.target.outerHTML = `<div class="wlogo">${T('rocket', 'aurora')}</div>`) }),
       h('h1', { text: '¡Hola! Soy Lanzadera' }),
       h('p.lead', { text: 'Tu nuevo dock para Windows: una barra con tus programas, carpetas y archivos favoritos que crece cuando la tocas. Te ayudo a dejarla a tu gusto en tres pasos.' }),
-      h('div.features', feats.map(([g, gr, t, d]) => h('div.feature', h('span.fi', { html: T(g, gr) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
+      h('div.features', feats.map(([g, gr, t, d, c]) => h('div.feature', h('span.fi', { html: T(g, gr, c) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
       h('div.actions', button('Empezar', () => go(1), { primary: true, icon: 'arrow-right' })),
       dots()
     );
@@ -292,17 +292,17 @@ export function welcomePage() {
     );
   } else {
     const tips = [
-      ['search', 'indigo', 'Alt + Espacio', 'Abre el buscador desde cualquier lugar.'],
-      ['mouse-pointer-2', 'oceano', 'Arrastra y suelta', 'Archivos o programas sobre el dock para fijarlos.'],
-      ['mouse-pointer-click', 'violeta', 'Clic derecho', 'Sobre el dock o un icono: todas las opciones.'],
-      ['layers', 'atardecer', 'Ctrl + Alt + 1, 2, 3', 'Cambia de espacio de trabajo.'],
-      ['inbox', 'menta', 'Estante', 'Suelta archivos ahí para tenerlos a mano.'],
-      ['wand-sparkles', 'aurora', 'Ordenar escritorio', 'Un clic y todo queda en su carpeta.'],
+      ['search', 'indigo', 'Alt + Espacio', 'Abre el buscador desde cualquier lugar.', '2328-fe0f'],
+      ['mouse-pointer-2', 'oceano', 'Arrastra y suelta', 'Archivos o programas sobre el dock para fijarlos.', '1f4e5'],
+      ['mouse-pointer-click', 'violeta', 'Clic derecho', 'Sobre el dock o un icono: todas las opciones.', '1f5b1-fe0f'],
+      ['layers', 'atardecer', 'Ctrl + Alt + 1, 2, 3', 'Cambia de espacio de trabajo.', '1f5c2-fe0f'],
+      ['inbox', 'menta', 'Estante', 'Suelta archivos ahí para tenerlos a mano.', '1f9fa'],
+      ['wand-sparkles', 'aurora', 'Ordenar escritorio', 'Un clic y todo queda en su carpeta.', '1fa84'],
     ];
     box.append(
       h('h1', { text: '¡Todo listo! 🎉' }),
       h('p.lead', { text: 'Tu dock ya está funcionando. Algunos trucos para sacarle provecho:' }),
-      h('div.features', tips.map(([g, gr, t, d]) => h('div.feature', h('span.fi', { html: T(g, gr) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
+      h('div.features', tips.map(([g, gr, t, d, c]) => h('div.feature', h('span.fi', { html: T(g, gr, c) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
       h('div.actions',
         button('Atrás', () => go(2)),
         button('Personalizar más', () => {

@@ -22,6 +22,10 @@ export function customUrl(file) {
   return `lanz://custom/${encodeURIComponent(file)}`;
 }
 
+export function fluentUrl(code) {
+  return `/assets/fluent/${code}.webp`;
+}
+
 // Descripción de diseño (sin imagen) para un elemento, usada también como respaldo.
 export function designFor(item) {
   if (item.type === 'action') return ACTION_DESIGN[item.action] || { glyph: 'sparkles', gradient: 'aurora' };
@@ -30,6 +34,12 @@ export function designFor(item) {
 }
 
 function tileFrom(d, ap, extra = {}) {
+  // Iconos 3D: objeto libre con sombra, o sobre un mosaico.
+  if (!extra.image && d.fluent && !d.forceGlyph && ap.iconPack !== 'glyph') {
+    if ((d.bg || ap.fluentBg) === 'tile')
+      return tileSVG({ image: fluentUrl(d.fluent), imageFit: 'tile', colors: gradientColors(d.gradient, d.colors), style: d.style || (ap.tileStyle === 'minimal' ? 'glass' : ap.tileStyle), shape: ap.tileShape });
+    return imgTag(fluentUrl(d.fluent), { ...d, forceGlyph: true }, ap, 'ico-img fluent');
+  }
   return tileSVG({
     glyph: d.glyph,
     text: d.text,
@@ -54,6 +64,8 @@ export function iconHTML(item, ap, opts = {}) {
   const auto = designFor(item);
 
   switch (ic.kind) {
+    case 'fluent':
+      return tileFrom({ fluent: ic.code, bg: ic.bg, gradient: ic.gradient || auto.gradient, colors: ic.colors, style: ic.style, glyph: auto.glyph || 'sparkles' }, { ...ap, iconPack: 'fluent3d' });
     case 'designed':
       return tileFrom({ glyph: ic.glyph, gradient: ic.gradient, colors: ic.colors, style: ic.style }, ap);
     case 'emoji':
@@ -84,6 +96,12 @@ export function iconHTML(item, ap, opts = {}) {
   }
   if (item.type === 'folder' && ap.iconMode === 'original' && item.target) return imgTag(iconUrl(item), auto, ap);
   return tileFrom(auto, ap);
+}
+
+// Icono de un espacio de trabajo.
+export function wsIconHTML(ws, ap) {
+  const ic = ws.icon || {};
+  return tileFrom({ glyph: ic.glyph || 'layers', gradient: ic.gradient || 'violeta', fluent: ic.fluent }, { ...ap, tileStyle: ap.tileStyle === 'minimal' ? 'fluent' : ap.tileStyle });
 }
 
 function groupPreview(item, ap) {

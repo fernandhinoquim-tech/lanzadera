@@ -17,6 +17,8 @@ function baseConfig() {
       magnification: 1.75,
       magnifyRange: 2.6,
       iconMode: 'original', // original | designed
+      iconPack: 'fluent3d', // fluent3d | glyph
+      fluentBg: 'none', // none | tile
       tileStyle: 'fluent',
       tileShape: 'squircle',
       labels: 'hover', // hover | always | never
@@ -51,6 +53,7 @@ function baseConfig() {
     },
     clipboard: { enabled: true, max: 40, persist: false },
     clock: { hour12: false, seconds: false },
+    monitor: { gadget: false, onTop: true, opacity: 0.96, bounds: null },
     workspaces: [],
     activeWorkspace: null,
     shelf: [],
@@ -103,7 +106,7 @@ function windowsWorkspaces(apps, paths) {
     { id: id(), type: 'app', name: 'Administrador de tareas', target: path.join(sys32, 'Taskmgr.exe') },
     { id: id(), type: 'app', name: 'Panel de control', target: path.join(sys32, 'control.exe') },
     { id: id(), type: 'app', name: 'Este equipo', target: 'shell:MyComputerFolder' },
-    { id: id(), type: 'url', name: 'Configuración de Windows', target: 'ms-settings:', icon: { kind: 'designed', glyph: 'settings', gradient: 'grafito' } },
+    { id: id(), type: 'url', name: 'Configuración de Windows', target: 'ms-settings:' },
   ].filter(Boolean);
 
   const officeGroup = office.length
@@ -122,9 +125,10 @@ function windowsWorkspaces(apps, paths) {
     { id: id(), type: 'shelf', name: 'Estante' },
     sep(),
     widget('clock', 'Reloj'),
-    widget('system', 'Rendimiento'),
+    widget('cpu', 'Procesador'),
+    widget('ram', 'Memoria'),
+    widget('net', 'Red'),
     widget('clipboard', 'Portapapeles'),
-    widget('notes', 'Notas'),
     sep(),
     action('search', 'Buscar'),
     action('organize', 'Ordenar escritorio'),
@@ -170,9 +174,9 @@ function windowsWorkspaces(apps, paths) {
   ].filter(Boolean);
 
   return [
-    { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano' }, items: principal },
-    { id: id(), name: 'Trabajo', icon: { glyph: 'briefcase', gradient: 'violeta' }, items: trabajo },
-    { id: id(), name: 'Ocio', icon: { glyph: 'gamepad-2', gradient: 'atardecer' }, items: ocio },
+    { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano', fluent: '1f3e0' }, items: principal },
+    { id: id(), name: 'Trabajo', icon: { glyph: 'briefcase', gradient: 'violeta', fluent: '1f4bc' }, items: trabajo },
+    { id: id(), name: 'Ocio', icon: { glyph: 'gamepad-2', gradient: 'atardecer', fluent: '1f3ae' }, items: ocio },
   ];
 }
 
@@ -209,9 +213,10 @@ function genericWorkspaces(paths) {
     { id: id(), type: 'shelf', name: 'Estante' },
     sep(),
     widget('clock', 'Reloj'),
-    widget('system', 'Rendimiento'),
+    widget('cpu', 'Procesador'),
+    widget('ram', 'Memoria'),
+    widget('net', 'Red'),
     widget('clipboard', 'Portapapeles'),
-    widget('notes', 'Notas'),
     sep(),
     action('search', 'Buscar'),
     action('organize', 'Ordenar escritorio'),
@@ -219,8 +224,8 @@ function genericWorkspaces(paths) {
     action('trash', 'Papelera'),
   ];
   return [
-    { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano' }, items: principal },
-    { id: id(), name: 'Trabajo', icon: { glyph: 'briefcase', gradient: 'violeta' }, items: [widget('clock', 'Reloj'), action('search', 'Buscar'), action('workspaces', 'Espacios')] },
+    { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano', fluent: '1f3e0' }, items: principal },
+    { id: id(), name: 'Trabajo', icon: { glyph: 'briefcase', gradient: 'violeta', fluent: '1f4bc' }, items: [widget('clock', 'Reloj'), action('search', 'Buscar'), action('workspaces', 'Espacios')] },
   ];
 }
 

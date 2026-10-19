@@ -171,6 +171,228 @@ public static class LzIcons {
   exit 0
 }
 
+if ($Mode -eq 'metrics') {
+  # Recolector de rendimiento: imprime una línea JSON por segundo.
+  $cs = @'
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using Microsoft.Win32;
+
+public static class LzMet {
+  class Cat {
+    public PerformanceCounterCategory C;
+    public Dictionary<string, CounterSample> Prev = new Dictionary<string, CounterSample>();
+    public Cat(string name) { try { if (PerformanceCounterCategory.Exists(name)) C = new PerformanceCounterCategory(name); } catch { C = null; } }
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  struct SYSTEM_POWER_STATUS { public byte ACLineStatus; public byte BatteryFlag; public byte BatteryLifePercent; public byte SystemStatusFlag; public int BatteryLifeTime; public int BatteryFullLifeTime; }
+  [DllImport("kernel32.dll")] static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS s);
+
+  static Cat gpu = new Cat("GPU Engine");
+  static Cat gpuMem = new Cat("GPU Adapter Memory");
+  static Cat net = new Cat("Network Interface");
+  static Cat disk = new Cat("PhysicalDisk");
+  static Cat proc = new Cat("Processor Information");
+  static Cat thermal = new Cat("Thermal Zone Information");
+  static string gpuName = "";
+  static double gpuTotal = 0;
+  static Dictionary<int, double> lastCpu = new Dictionary<int, double>();
+  static DateTime lastProcAt = DateTime.MinValue;
+  static int cores = Environment.ProcessorCount;
+  static CultureInfo IC = CultureInfo.InvariantCulture;
+
+  static string J(string s) {
+    if (s == null) return "\"\"";
+    StringBuilder b = new StringBuilder("\"");
+    foreach (char c in s) {
+      if (c == '"' || c == '\\') { b.Append('\\'); b.Append(c); }
+      else if (c < 32) b.Append(' ');
+      else b.Append(c);
+    }
+    return b.Append('"').ToString();
+  }
+  static string N(double v) { if (double.IsNaN(v) || double.IsInfinity(v)) return "null"; return Math.Round(v, 2).ToString(IC); }
+
+  // Lee una categoría completa de una sola vez y devuelve valor por instancia (calculando tasas).
+  static Dictionary<string, double> Read(Cat cat, string counter, bool rate) {
+    Dictionary<string, double> r = new Dictionary<string, double>();
+    if (cat.C == null) return r;
+    try {
+      InstanceDataCollectionCollection all = cat.C.ReadCategory();
+      InstanceDataCollection col = all[counter.ToLowerInvariant()];
+      if (col == null) return r;
+      foreach (InstanceData d in col.Values) {
+        string key = counter + "|" + d.InstanceName;
+        if (rate) {
+          CounterSample prev;
+          if (cat.Prev.TryGetValue(key, out prev)) r[d.InstanceName] = CounterSample.Calculate(prev, d.Sample);
+          cat.Prev[key] = d.Sample;
+        } else {
+          r[d.InstanceName] = CounterSample.Calculate(d.Sample);
+        }
+      }
+    } catch { }
+    return r;
+  }
+
+  public static void Init() {
+    try {
+      using (RegistryKey cls = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}")) {
+        if (cls != null) foreach (string sub in cls.GetSubKeyNames()) {
+          try {
+            using (RegistryKey k = cls.OpenSubKey(sub)) {
+              if (k == null) continue;
+              object mem = k.GetValue("HardwareInformation.qwMemorySize");
+              double m = 0;
+              if (mem is long) m = (long)mem; else if (mem is byte[] && ((byte[])mem).Length >= 8) m = BitConverter.ToInt64((byte[])mem, 0);
+              else if (mem is int) m = (uint)(int)mem;
+              string desc = k.GetValue("DriverDesc") as string;
+              if (desc != null && m >= gpuTotal) { gpuTotal = m; gpuName = desc; }
+            }
+          } catch { }
+        }
+      }
+    } catch { }
+  }
+
+  static string Gpu() {
+    Dictionary<string, double> util = Read(gpu, "Utilization Percentage", true);
+    Dictionary<string, double> engines = new Dictionary<string, double>();
+    foreach (KeyValuePair<string, double> kv in util) {
+      int i = kv.Key.IndexOf("_luid_");
+      string eng = i >= 0 ? kv.Key.Substring(i) : kv.Key;
+      double v;
+      engines.TryGetValue(eng, out v);
+      engines[eng] = v + kv.Value;
+    }
+    double max = 0;
+    foreach (double v in engines.Values) if (v > max) max = v;
+    double used = 0;
+    foreach (double v in Read(gpuMem, "Dedicated Usage", false).Values) if (v > used) used = v;
+    if (gpu.C == null && gpuName == "") return "null";
+    return "{\"util\":" + N(Math.Min(100, max)) + ",\"mem\":" + N(used) + ",\"memTotal\":" + N(gpuTotal) + ",\"name\":" + J(gpuName) + "}";
+  }
+
+  static string Net() {
+    double rx = 0, tx = 0;
+    Dictionary<string, double> r = Read(net, "Bytes Received/sec", true);
+    Dictionary<string, double> t = Read(net, "Bytes Sent/sec", true);
+    foreach (KeyValuePair<string, double> kv in r) if (kv.Key.IndexOf("loopback", StringComparison.OrdinalIgnoreCase) < 0 && kv.Key.IndexOf("isatap", StringComparison.OrdinalIgnoreCase) < 0) rx += kv.Value;
+    foreach (KeyValuePair<string, double> kv in t) if (kv.Key.IndexOf("loopback", StringComparison.OrdinalIgnoreCase) < 0 && kv.Key.IndexOf("isatap", StringComparison.OrdinalIgnoreCase) < 0) tx += kv.Value;
+    if (net.C == null) return "null";
+    return "{\"rx\":" + N(rx) + ",\"tx\":" + N(tx) + "}";
+  }
+
+  static string Disk() {
+    if (disk.C == null) return "null";
+    double rd = 0, wr = 0, idle = 100;
+    double v;
+    if (Read(disk, "Disk Read Bytes/sec", true).TryGetValue("_Total", out v)) rd = v;
+    if (Read(disk, "Disk Write Bytes/sec", true).TryGetValue("_Total", out v)) wr = v;
+    if (Read(disk, "% Idle Time", true).TryGetValue("_Total", out v)) idle = v;
+    return "{\"r\":" + N(rd) + ",\"w\":" + N(wr) + ",\"busy\":" + N(Math.Max(0, Math.Min(100, 100 - idle))) + "}";
+  }
+
+  static string Cpu() {
+    double perf = 0, freq = 0, v;
+    if (Read(proc, "% Processor Performance", true).TryGetValue("_Total", out v)) perf = v;
+    if (Read(proc, "Processor Frequency", false).TryGetValue("_Total", out v)) freq = v;
+    return "{\"mhz\":" + N(freq > 0 && perf > 0 ? freq * perf / 100 : freq) + ",\"base\":" + N(freq) + "}";
+  }
+
+  static string Temps() {
+    List<string> l = new List<string>();
+    foreach (KeyValuePair<string, double> kv in Read(thermal, "Temperature", false)) {
+      double c = kv.Value - 273.15;
+      if (c > 5 && c < 125) l.Add(N(c));
+    }
+    return "[" + string.Join(",", l.ToArray()) + "]";
+  }
+
+  static string Battery() {
+    SYSTEM_POWER_STATUS s;
+    if (!GetSystemPowerStatus(out s) || s.BatteryFlag == 128 || s.BatteryLifePercent == 255) return "null";
+    return "{\"pct\":" + s.BatteryLifePercent + ",\"ac\":" + (s.ACLineStatus == 1 ? "true" : "false") + ",\"secs\":" + s.BatteryLifeTime + "}";
+  }
+
+  static string Drives() {
+    List<string> l = new List<string>();
+    foreach (DriveInfo d in DriveInfo.GetDrives()) {
+      try {
+        if (!d.IsReady || (d.DriveType != DriveType.Fixed && d.DriveType != DriveType.Removable)) continue;
+        l.Add("{\"name\":" + J(d.Name) + ",\"label\":" + J(d.VolumeLabel) + ",\"total\":" + N(d.TotalSize) + ",\"free\":" + N(d.AvailableFreeSpace) + "}");
+      } catch { }
+    }
+    return "[" + string.Join(",", l.ToArray()) + "]";
+  }
+
+  class PInfo { public string Name; public double Cpu; public double Mem; }
+
+  static string Procs() {
+    DateTime now = DateTime.UtcNow;
+    double secs = lastProcAt == DateTime.MinValue ? 0 : (now - lastProcAt).TotalSeconds;
+    lastProcAt = now;
+    Dictionary<string, PInfo> by = new Dictionary<string, PInfo>(StringComparer.OrdinalIgnoreCase);
+    Dictionary<int, double> next = new Dictionary<int, double>();
+    foreach (Process p in Process.GetProcesses()) {
+      try {
+        if (p.Id == 0) continue;
+        string name = p.ProcessName;
+        if (name == "Idle" || name == "System" || name == "Memory Compression") continue;
+        PInfo info;
+        if (!by.TryGetValue(name, out info)) { info = new PInfo(); info.Name = name; by[name] = info; }
+        info.Mem += p.WorkingSet64;
+        double t = p.TotalProcessorTime.TotalSeconds;
+        next[p.Id] = t;
+        double prev;
+        if (secs > 0 && lastCpu.TryGetValue(p.Id, out prev)) info.Cpu += Math.Max(0, (t - prev) / secs / cores * 100);
+      } catch { } finally { p.Dispose(); }
+    }
+    lastCpu = next;
+    List<PInfo> list = new List<PInfo>(by.Values);
+    list.Sort(delegate (PInfo a, PInfo b) { return b.Cpu.CompareTo(a.Cpu); });
+    List<string> top = new List<string>();
+    for (int i = 0; i < Math.Min(8, list.Count); i++) top.Add("[" + J(list[i].Name) + "," + N(list[i].Cpu) + "," + N(list[i].Mem) + "]");
+    list.Sort(delegate (PInfo a, PInfo b) { return b.Mem.CompareTo(a.Mem); });
+    List<string> topMem = new List<string>();
+    for (int i = 0; i < Math.Min(8, list.Count); i++) topMem.Add("[" + J(list[i].Name) + "," + N(list[i].Cpu) + "," + N(list[i].Mem) + "]");
+    return "{\"cpu\":[" + string.Join(",", top.ToArray()) + "],\"mem\":[" + string.Join(",", topMem.ToArray()) + "],\"count\":" + next.Count + "}";
+  }
+
+  public static void Run(int parentPid) {
+    Init();
+    Stream outStream = Console.OpenStandardOutput();
+    StreamWriter w = new StreamWriter(outStream, new UTF8Encoding(false));
+    w.AutoFlush = true;
+    int n = 0;
+    string drives = "[]", procs = "null";
+    while (true) {
+      if (n % 30 == 0) drives = Drives();
+      if (n % 2 == 0) procs = Procs();
+      string line = "{\"gpu\":" + Gpu() + ",\"net\":" + Net() + ",\"disk\":" + Disk() + ",\"cpu\":" + Cpu() + ",\"temps\":" + Temps() +
+        ",\"battery\":" + Battery() + ",\"drives\":" + drives + ",\"procs\":" + procs + "}";
+      if (n > 0) w.WriteLine(line);
+      n++;
+      Thread.Sleep(1000);
+      if (parentPid > 0 && n % 5 == 0) {
+        try { Process.GetProcessById(parentPid).Dispose(); } catch { return; }
+      }
+    }
+  }
+}
+'@
+  Add-Type -TypeDefinition $cs
+  [LzMet]::Run($ParentPid)
+  exit 0
+}
+
 if ($Mode -eq 'watch') {
   # Vigila si la ventana activa ocupa toda una pantalla (video o juego en pantalla completa).
   $cs = @'

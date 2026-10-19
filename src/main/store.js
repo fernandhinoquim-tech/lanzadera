@@ -29,7 +29,7 @@ function deepMerge(target, src) {
 function sanitizeIcon(icon) {
   if (!isPlainObject(icon)) return { kind: 'auto' };
   const out = { kind: String(icon.kind || 'auto') };
-  for (const k of ['glyph', 'gradient', 'style', 'emoji', 'text', 'file', 'fit']) if (typeof icon[k] === 'string') out[k] = icon[k].slice(0, 400);
+  for (const k of ['glyph', 'gradient', 'style', 'emoji', 'text', 'file', 'fit', 'code', 'bg']) if (typeof icon[k] === 'string') out[k] = icon[k].slice(0, 400);
   if (Array.isArray(icon.colors) && icon.colors.length === 2 && icon.colors.every((c) => /^#[\da-f]{6}$/i.test(c))) out.colors = icon.colors;
   return out;
 }
@@ -72,7 +72,9 @@ function sanitizeConfig(c) {
     .map((w) => ({
       id: typeof w.id === 'string' && w.id ? w.id : newId(),
       name: String(w.name || 'Espacio').slice(0, 60),
-      icon: isPlainObject(w.icon) ? { glyph: String(w.icon.glyph || 'layers'), gradient: String(w.icon.gradient || 'violeta') } : { glyph: 'layers', gradient: 'violeta' },
+      icon: isPlainObject(w.icon)
+        ? { glyph: String(w.icon.glyph || 'layers'), gradient: String(w.icon.gradient || 'violeta'), ...(typeof w.icon.fluent === 'string' ? { fluent: w.icon.fluent } : {}) }
+        : { glyph: 'layers', gradient: 'violeta' },
       items: sanitizeItems(w.items),
     }))
     .slice(0, 12);
@@ -94,6 +96,9 @@ function sanitizeConfig(c) {
   if (!['normal', 'compact', 'mini', 'hidden'].includes(pos.idle)) pos.idle = 'compact';
   pos.margin = Math.max(0, Math.min(80, Number(pos.margin) || 0));
   c.clipboard.max = Math.max(5, Math.min(200, Number(c.clipboard.max) || 40));
+  const b = c.monitor.bounds;
+  if (b && !(Number.isFinite(b.x) && Number.isFinite(b.y))) c.monitor.bounds = null;
+  c.monitor.opacity = Math.max(0.4, Math.min(1, Number(c.monitor.opacity) || 0.96));
   return c;
 }
 

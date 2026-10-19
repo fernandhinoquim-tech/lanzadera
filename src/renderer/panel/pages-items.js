@@ -1,6 +1,6 @@
 // Páginas: Elementos del dock, editor, agregar y espacios de trabajo.
 import { h, esc, uid, normalize, debounce } from '../shared/dom.js';
-import { iconHTML } from '../shared/icon-view.js';
+import { iconHTML, wsIconHTML } from '../shared/icon-view.js';
 import { tileSVG, gradientColors } from '../shared/tiles.js';
 import { ACTION_DESIGN, WIDGET_DESIGN } from '../shared/autoicon.js';
 import { P, api, ap, patch, findAnywhere, updateAnywhere, removeAnywhere, activeWs, TYPE_LABEL } from './ctx.js';
@@ -371,9 +371,9 @@ export function workspacesPage(params) {
   const save = (list) => patch({ workspaces: list });
   for (const [i, w] of wss.entries()) {
     const active = w.id === P.config.activeWorkspace;
-    const ico = h('div.wico', { title: 'Cambiar icono', html: tileSVG({ glyph: w.icon?.glyph || 'layers', colors: gradientColors(w.icon?.gradient || 'violeta'), style: ap().tileStyle === 'minimal' ? 'fluent' : ap().tileStyle, shape: ap().tileShape }) });
+    const ico = h('div.wico', { title: 'Cambiar icono', html: wsIconHTML(w, ap()) });
     ico.addEventListener('click', () =>
-      openGlyphPicker({ glyph: w.icon?.glyph || 'layers', gradient: w.icon?.gradient || 'violeta', onApply: (icon) => {
+      openGlyphPicker({ glyph: w.icon?.glyph || 'layers', gradient: w.icon?.gradient || 'violeta', fluent: w.icon?.fluent, onApply: (icon) => {
         const list = clone(wss);
         list[i].icon = icon;
         save(list);
@@ -424,7 +424,8 @@ export function workspacesPage(params) {
           { id: uid(), type: 'action', action: 'search', name: 'Buscar' },
           { id: uid(), type: 'action', action: 'workspaces', name: 'Espacios' },
         ];
-    const w = { id: uid(), name: `Espacio ${wss.length + 1}`, icon: { glyph: glyphs[wss.length % glyphs.length], gradient: grads[wss.length % grads.length] }, items };
+    const fluents = ['2b50', '1f4bc', '1f393', '1f3ae', '1f3a8', '1f4bb', '1f3b5', '2764-fe0f', '1f680', '2615'];
+    const w = { id: uid(), name: `Espacio ${wss.length + 1}`, icon: { glyph: glyphs[wss.length % glyphs.length], gradient: grads[wss.length % grads.length], fluent: fluents[wss.length % fluents.length] }, items };
     patch({ workspaces: [...clone(wss), w], activeWorkspace: w.id });
     toast(`«${w.name}» creado: ya está en tu dock`);
   };

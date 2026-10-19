@@ -2,8 +2,9 @@
 import { h, esc, debounce } from '../shared/dom.js';
 import { GLYPHS } from '../shared/icon-bank.js';
 import { GRADIENTS, TILE_STYLES, tileSVG, gradientColors, glyphSVG } from '../shared/tiles.js';
-import { iconHTML, designFor, customUrl } from '../shared/icon-view.js';
-import { CATEGORY_NAMES, iconsInCategory, searchIcons } from '../shared/icon-es.js';
+import { iconHTML, designFor, customUrl, fluentUrl } from '../shared/icon-view.js';
+import { CATEGORY_NAMES, iconsInCategory, searchIcons, fluentInGroup, searchFluent, FLUENT_NAME } from '../shared/icon-es.js';
+import { FLUENT_GROUPS } from '../shared/fluent-bank.js';
 import { P, api, ap } from './ctx.js';
 import { modal, button, seg, toast, gl } from './ui.js';
 
@@ -23,7 +24,7 @@ function iconToSel(icon, item) {
   const i = icon || { kind: 'auto' };
   if (i.kind && i.kind !== 'auto') return { ...i };
   const d = designFor(item);
-  return { kind: 'auto', glyph: d.glyph || 'sparkles', gradient: d.gradient || 'aurora', text: d.text };
+  return { kind: 'auto', glyph: d.glyph || 'sparkles', gradient: d.gradient || 'aurora', text: d.text, code: d.fluent };
 }
 
 function previewItem(item, sel) {
@@ -32,8 +33,10 @@ function previewItem(item, sel) {
 
 export function openIconPicker({ item, title, onApply }) {
   const sel = iconToSel(item.icon, item);
-  let tab = sel.kind === 'custom' ? 'mios' : sel.kind === 'emoji' ? 'emoji' : sel.kind === 'text' ? 'letras' : sel.kind === 'original' || sel.kind === 'auto' ? (item.type === 'app' ? 'original' : 'banco') : 'banco';
+  let tab = { custom: 'mios', emoji: 'emoji', text: 'letras', designed: 'banco', original: 'original' }[sel.kind] || '3d';
   let cat = 'destacados';
+  let fcat = 'destacados';
+  let fquery = '';
   let query = '';
 
   const big = h('div.big');
@@ -68,7 +71,8 @@ export function openIconPicker({ item, title, onApply }) {
   const renderTabs = () => {
     tabs.innerHTML = '';
     const list = [
-      ['banco', 'Banco de iconos', 'palette'],
+      ['3d', 'Iconos 3D', 'box'],
+      ['banco', 'Iconos de línea', 'palette'],
       ['mios', 'Mis imágenes', 'image-up'],
       ['emoji', 'Emoji', 'face-slightly-smiling'],
       ['letras', 'Letras', 'type'],
@@ -87,9 +91,9 @@ export function openIconPicker({ item, title, onApply }) {
 
   const renderStyle = () => {
     styleBox.innerHTML = '';
-    const usesTile = ['designed', 'emoji', 'text', 'auto'].includes(sel.kind) || (sel.kind === 'custom' && sel.fit && sel.fit !== 'contain');
+    const usesTile = ['designed', 'emoji', 'text'].includes(sel.kind) || (sel.kind === 'auto' && ap().iconPack === 'glyph') || (sel.kind === 'custom' && sel.fit && sel.fit !== 'contain') || (sel.kind === 'fluent' && sel.bg === 'tile');
     if (!usesTile) return;
-    const sample = { glyph: sel.glyph || 'sparkles', emoji: sel.kind === 'emoji' ? sel.emoji : undefined, text: sel.kind === 'text' ? sel.text : undefined };
+    const sample = sel.kind === 'fluent' ? { image: fluentUrl(sel.code), imageFit: 'tile' } : { glyph: sel.glyph || 'sparkles', emoji: sel.kind === 'emoji' ? sel.emoji : undefined, text: sel.kind === 'text' ? sel.text : undefined };
     const colors = gradientColors(sel.gradient, sel.colors);
 
     const styles = h('div.styles-row');
@@ -139,7 +143,62 @@ export function openIconPicker({ item, title, onApply }) {
 
   const renderBody = () => {
     body.innerHTML = '';
-    if (tab === 'banco') {
+    if (tab === '3d') {
+      const search = h('input', { type: 'search', placeholder: 'Buscar icono 3D: carpeta, música, juego, dinero, casa…', style: { width: '100%' } });
+      search.value = fquery;
+      const chips = h('div.chips');
+      const grid = h('div.fgrid');
+      const drawGrid = () => {
+        const codes = fquery ? searchFluent(fquery) : fluentInGroup(fcat);
+        grid.innerHTML = codes.length
+          ? codes.map((c) => `<div class="fcell${sel.kind === 'fluent' && sel.code === c ? ' on' : ''}" data-c="${c}" title="${esc(FLUENT_NAME[c] || '')}"><img src="${fluentUrl(c)}" loading="lazy" alt=""></div>`).join('')
+          : `<div class="muted" style="grid-column:1/-1;padding:16px">No encontré iconos para «${esc(fquery)}».</div>`;
+      };
+      for (const [k, label] of Object.entries(FLUENT_GROUPS)) {
+        const c = h('button.chip' + (!fquery && fcat === k ? '.on' : ''), { text: label });
+        c.addEventListener('click', () => {
+          fcat = k;
+          fquery = '';
+          search.value = '';
+          chips.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === c));
+          drawGrid();
+        });
+        chips.append(c);
+      }
+      search.addEventListener(
+        'input',
+        debounce(() => {
+          fquery = search.value.trim();
+          chips.querySelectorAll('.chip').forEach((x) => x.classList.remove('on'));
+          drawGrid();
+        }, 120)
+      );
+      grid.addEventListener('click', (e) => {
+        const c = e.target.closest('.fcell');
+        if (!c) return;
+        Object.assign(sel, { kind: 'fluent', code: c.dataset.c, bg: sel.bg || 'none' });
+        grid.querySelectorAll('.fcell.on').forEach((x) => x.classList.remove('on'));
+        c.classList.add('on');
+        refreshPreview();
+        renderStyle();
+      });
+      const bgSeg = seg(
+        [
+          ['none', 'Objeto libre', 'box'],
+          ['tile', 'Sobre mosaico', 'square'],
+        ],
+        sel.bg || 'none',
+        (v) => {
+          sel.bg = v;
+          if (sel.kind !== 'fluent' && sel.code) sel.kind = 'fluent';
+          refreshPreview();
+          renderStyle();
+        }
+      );
+      drawGrid();
+      body.append(search, chips, grid, h('div', { style: { marginTop: '10px' } }, bgSeg));
+      setTimeout(() => search.focus(), 50);
+    } else if (tab === 'banco') {
       const search = h('input', { type: 'search', placeholder: 'Buscar icono (en español o inglés): música, carpeta, juego…', style: { width: '100%' } });
       search.value = query;
       const chips = h('div.chips');
@@ -375,12 +434,13 @@ export function bindDrop(zone, onPaths) {
 }
 
 // Selector pequeño de glifo + degradado (para espacios de trabajo).
-export function openGlyphPicker({ glyph, gradient, onApply }) {
-  const item = { type: 'action', name: 'Espacio', icon: { kind: 'designed', glyph, gradient } };
+export function openGlyphPicker({ glyph, gradient, fluent, onApply }) {
+  const item = { type: 'action', name: 'Espacio', icon: fluent ? { kind: 'fluent', code: fluent, gradient } : { kind: 'designed', glyph, gradient } };
   return openIconPicker({
     item,
     title: 'Icono del espacio',
-    onApply: (icon) => onApply({ glyph: icon.glyph || glyph, gradient: icon.gradient || gradient }),
+    onApply: (icon) =>
+      onApply(icon.kind === 'fluent' ? { glyph, gradient: icon.gradient || gradient, fluent: icon.code } : { glyph: icon.glyph || glyph, gradient: icon.gradient || gradient }),
   });
 }
 

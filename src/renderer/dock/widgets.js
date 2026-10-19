@@ -1,10 +1,33 @@
 // Widgets del dock: reloj con calendario, rendimiento, portapapeles y notas rápidas.
-import { h, esc, timeAgo, formatSize, uid, debounce } from '../shared/dom.js';
+import { h, esc, timeAgo, uid, debounce } from '../shared/dom.js';
 import { tileSVG, gradientColors } from '../shared/tiles.js';
+import { seriesMarkup, fmtRateShort, METRIC_COLORS } from '../shared/charts.js';
 import { S, api, ap, gl, toast } from './core.js';
 
 const FONT = "'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif";
 let sysCache = { cpu: 0, mem: 0 };
+export const METRIC_WIDGETS = new Set(['system', 'cpu', 'ram', 'gpu', 'net', 'disk']);
+
+// Mosaico de métrica: nombre, valor grande y gráfica en vivo.
+function metricTile(item, a) {
+  const m = S.metrics;
+  const now = m?.now;
+  const hist = m?.hist || {};
+  const def = {
+    cpu: ['CPU', now ? `${now.cpu}` : '—', '%', [{ values: hist.cpu || [], colors: METRIC_COLORS.cpu }], 100],
+    ram: ['RAM', now ? `${now.mem}` : '—', '%', [{ values: hist.mem || [], colors: METRIC_COLORS.mem }], 100],
+    gpu: ['GPU', now?.gpu ? `${Math.round(now.gpu.util || 0)}` : '—', now?.gpu ? '%' : '', [{ values: hist.gpu || [], colors: METRIC_COLORS.gpu }], 100],
+    net: ['RED', now?.net ? fmtRateShort(now.net.rx) : '—', '', [{ values: hist.rx || [], colors: METRIC_COLORS.rx }, { values: hist.tx || [], colors: METRIC_COLORS.tx, fill: 0.2 }], undefined],
+    disk: ['DISCO', now?.disk ? (now.disk.busy != null ? `${Math.round(now.disk.busy)}` : fmtRateShort((now.disk.r || 0) + (now.disk.w || 0))) : '—', now?.disk?.busy != null ? '%' : '', [{ values: hist.dr || [], colors: METRIC_COLORS.dr }, { values: hist.dw || [], colors: METRIC_COLORS.dw, fill: 0.2 }], undefined],
+  }[item.widget];
+  const [label, value, unit, series, max] = def;
+  const color = series[0].colors[0];
+  const content =
+    seriesMarkup(series, { x0: 4, x1: 96, y0: 58, y1: 92, max, slots: 30, width: 1.6 }) +
+    `<text x="13" y="27" font-size="12.5" font-weight="700" letter-spacing="1" fill="${color}" font-family="${FONT}">${label}</text>` +
+    `<text x="12" y="52" font-size="${value.length > 4 ? 21 : 27}" font-weight="700" letter-spacing="-.5" fill="currentColor" font-family="${FONT}">${esc(value)}<tspan font-size="14" fill-opacity=".7">${unit}</tspan></text>`;
+  return tileSVG({ content, colors: ['#273449', '#0b1120'], style: 'fluent', shape: a.tileShape });
+}
 
 export function widgetTile(item) {
   const a = ap();
@@ -19,7 +42,9 @@ export function widgetTile(item) {
       `<text x="50" y="70" text-anchor="middle" font-size="14" font-weight="600" letter-spacing="1" fill="currentColor" opacity=".72" font-family="${FONT}">${esc(day)}</text>`;
     return tileSVG({ content, colors, style, shape: a.tileShape });
   }
+  if (['cpu', 'ram', 'gpu', 'net', 'disk'].includes(item.widget)) return metricTile(item, a);
   if (item.widget === 'system') {
+    if (S.metrics?.now) sysCache = S.metrics.now;
     const ring = (r, pct, color, w) => {
       const c = 2 * Math.PI * r;
       return (
@@ -34,16 +59,6 @@ export function widgetTile(item) {
     return tileSVG({ content, colors, style, shape: a.tileShape });
   }
   return null;
-}
-
-export async function refreshSystem() {
-  try {
-    const s = await api.sysStats();
-    sysCache = s;
-    return s;
-  } catch {
-    return sysCache;
-  }
 }
 
 // ---------- Contenido de ventanas emergentes ----------
@@ -99,45 +114,6 @@ export function calendarView() {
   });
   draw();
   const t = setInterval(draw, 15000);
-  box.cleanup = () => clearInterval(t);
-  return box;
-}
-
-function ringSVG(pct, color) {
-  const r = 40;
-  const c = 2 * Math.PI * r;
-  return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".12" stroke-width="10"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${((c * pct) / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)" style="transition:stroke-dasharray .6s"/><text x="50" y="52" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="currentColor" font-family="${FONT}">${pct}%</text></svg>`;
-}
-
-function fmtUptime(s) {
-  const d = Math.floor(s / 86400);
-  const hh = Math.floor((s % 86400) / 3600);
-  const mm = Math.floor((s % 3600) / 60);
-  return d ? `${d} d ${hh} h` : hh ? `${hh} h ${mm} min` : `${mm} min`;
-}
-
-export function systemView() {
-  const box = h('div.sys');
-  let battery = null;
-  navigator.getBattery?.().then((b) => {
-    battery = b;
-    draw(sysCache);
-  });
-  const draw = (s) => {
-    const disk = s.disk ? Math.round(((s.disk.total - s.disk.free) / s.disk.total) * 100) : null;
-    const bat = battery && !(battery.charging && battery.level === 1 && battery.chargingTime === 0) ? battery : null;
-    box.innerHTML =
-      `<div class="rings"><div class="ring">${ringSVG(s.cpu || 0, '#22d3ee')}Procesador</div><div class="ring">${ringSVG(s.mem || 0, '#a78bfa')}Memoria</div></div>` +
-      `<div><div class="kv"><span>Memoria en uso</span><b>${formatSize(s.memUsed)} de ${formatSize(s.memTotal)}</b></div></div>` +
-      (disk !== null ? `<div><div class="kv"><span>Disco ${esc(s.disk.root)}</span><b>${formatSize(s.disk.free)} libres</b></div><div class="bar"><i style="width:${disk}%"></i></div></div>` : '') +
-      (bat ? `<div><div class="kv"><span>Batería ${bat.charging ? '· cargando' : ''}</span><b>${Math.round(bat.level * 100)}%</b></div><div class="bar"><i style="width:${Math.round(bat.level * 100)}%;background:linear-gradient(90deg,#4ade80,#16a34a)"></i></div></div>` : '') +
-      `<div class="kv"><span>Encendido desde hace</span><b>${fmtUptime(s.uptime || 0)}</b></div>` +
-      `<div class="kv"><span>${esc(s.cpuModel || 'Procesador')}</span><b>${s.cores || ''} núcleos</b></div>`;
-  };
-  draw(sysCache);
-  const tick = async () => draw(await refreshSystem());
-  tick();
-  const t = setInterval(tick, 1500);
   box.cleanup = () => clearInterval(t);
   return box;
 }

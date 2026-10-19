@@ -129,7 +129,12 @@ export function itemMenu(item, parent, x, y) {
 
 const WIDGETS = [
   ['clock', 'Reloj y calendario'],
-  ['system', 'Rendimiento'],
+  ['cpu', 'Procesador (CPU)'],
+  ['ram', 'Memoria (RAM)'],
+  ['gpu', 'Tarjeta gráfica (GPU)'],
+  ['net', 'Red (bajada y subida)'],
+  ['disk', 'Disco'],
+  ['system', 'Rendimiento en anillos'],
   ['clipboard', 'Portapapeles'],
   ['notes', 'Notas rápidas'],
 ];
@@ -141,6 +146,7 @@ const SPECIALS = [
   () => ({ type: 'shelf', name: 'Estante' }),
   () => ({ type: 'smart', name: 'Sugeridas', layout: 'grid' }),
   () => ({ type: 'action', action: 'apps', name: 'Todas las apps' }),
+  () => ({ type: 'action', action: 'monitor', name: 'Monitor de rendimiento' }),
   () => ({ type: 'action', action: 'search', name: 'Buscar' }),
   () => ({ type: 'action', action: 'organize', name: 'Ordenar escritorio' }),
   () => ({ type: 'action', action: 'workspaces', name: 'Espacios' }),
@@ -271,5 +277,5 @@ export async function activate(item, el, ev = {}) {
 
 export function hasPopup(item) {
   if (['group', 'folderStack', 'recent', 'shelf', 'smart', 'widget'].includes(item.type)) return true;
-  return item.type === 'action' && ['workspaces', 'organize', 'apps'].includes(item.action);
+  return item.type === 'action' && ['workspaces', 'organize', 'apps', 'monitor'].includes(item.action);
 }

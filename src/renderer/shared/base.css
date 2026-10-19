@@ -96,6 +96,11 @@ svg.gl {
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.28));
 }
 
+.ico-img.fluent {
+  transform: scale(0.94);
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
 .ico-img.thumb {
   object-fit: cover;
   border-radius: 18%;
@@ -142,7 +147,12 @@ svg.gl {
   filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3));
 }
 
-.gp-cell .ico-img.thumb {
+.gp-cell .ico-img.fluent {
+  transform: scale(0.94);
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.ico-img.thumb {
   border-width: 1px;
 }
 

@@ -1,9 +1,10 @@
 // Ventanas emergentes del dock: grupos, pilas de carpetas, estante, widgets y más.
 import { h, esc, timeAgo, formatSize, normalize, extname } from '../shared/dom.js';
-import { iconHTML, fileIconHTML } from '../shared/icon-view.js';
+import { iconHTML, fileIconHTML, wsIconHTML } from '../shared/icon-view.js';
 import { tileSVG, gradientColors } from '../shared/tiles.js';
 import { S, api, ap, gl, toast, launchItem, isVertical } from './core.js';
-import { calendarView, systemView, clipboardView, notesView } from './widgets.js';
+import { calendarView, clipboardView, notesView, METRIC_WIDGETS } from './widgets.js';
+import { createDashboard } from '../shared/metrics-view.js';
 import { openMenu } from './menu.js';
 
 let cur = null;
@@ -252,13 +253,20 @@ export async function openPopup(item, anchor, opts = {}) {
     S.layer.append(el);
     place(el, anchorRect);
     cur.el = el;
+    // Si el contenido crece (p. ej. al llegar datos), se recoloca para no tapar el dock.
+    const ro = new ResizeObserver(() => el.isConnected && place(el, anchorRect));
+    ro.observe(el);
+    const prevCleanup = built.cleanup;
+    built.cleanup = () => {
+      ro.disconnect();
+      prevCleanup?.();
+    };
     if (built.focus) {
       api.focusDock();
       setTimeout(() => built.focus.focus(), 60);
     }
   }
-  cur.content = built.body || built;
-  cur.cleanup = built.cleanup;
+  cur.content = { cleanup: () => built.cleanup?.() };
   S.hooks.refreshHit?.();
 }
 
@@ -369,16 +377,16 @@ async function buildContent(item, anchorRect) {
       return wrap(entries, { title: item.name || 'Sugeridas', meta: 'para esta hora', emptyText: 'Usa tus programas unos días y aquí aparecerán los que más abres a esta hora.' });
     }
     case 'widget': {
-      const titles = { clock: 'Calendario', system: 'Rendimiento', clipboard: 'Portapapeles', notes: 'Notas rápidas' };
-      const views = { clock: calendarView, system: systemView, clipboard: () => clipboardView(closePopup), notes: notesView };
+      if (METRIC_WIDGETS.has(item.widget)) return dashboardView();
+      const titles = { clock: 'Calendario', clipboard: 'Portapapeles', notes: 'Notas rápidas' };
+      const views = { clock: calendarView, clipboard: () => clipboardView(closePopup), notes: notesView };
       const body = views[item.widget]?.();
       if (!body) return null;
       const buttons = body.headButtons?.() || [];
-      if (item.widget === 'system' && S.state.env.platform === 'win32')
-        buttons.push(headBtn('activity', 'Administrador', () => launchItem({ type: 'app', target: 'C:\\Windows\\System32\\Taskmgr.exe' })));
       return { title: titles[item.widget], body, buttons, foot: body.foot, focus: body.focusEl, cleanup: body.cleanup };
     }
     case 'action':
+      if (item.action === 'monitor') return dashboardView();
       if (item.action === 'workspaces') return workspacesView();
       if (item.action === 'organize') return organizeView();
       if (item.action === 'apps') return appsView();
@@ -387,13 +395,31 @@ async function buildContent(item, anchorRect) {
   return null;
 }
 
+function dashboardView() {
+  const dash = createDashboard({ mode: 'popup' });
+  const box = h('div', { style: { width: '700px', maxWidth: '100%' } }, dash.el);
+  S.hooks.dashboard = dash;
+  if (S.metrics) dash.update(S.metrics);
+  S.hooks.metricsDemand?.();
+  box.cleanup = () => {
+    S.hooks.dashboard = null;
+    S.hooks.metricsDemand?.();
+  };
+  const buttons = [
+    headBtn('picture-in-picture-2', 'Monitor flotante', () => (closePopup(), api.patch({ monitor: { gadget: true } }))),
+    headBtn('maximize-2', '', () => (closePopup(), api.run('monitor')), 'Abrir en una ventana'),
+  ];
+  if (S.state.env.platform === 'win32') buttons.push(headBtn('activity', '', () => launchItem({ type: 'app', target: 'C:\\Windows\\System32\\Taskmgr.exe' }), 'Administrador de tareas'));
+  return { title: 'Rendimiento', meta: 'en vivo', body: box, buttons, cleanup: box.cleanup };
+}
+
 function workspacesView() {
   const list = h('div.list', { style: { width: '300px' } });
   for (const [i, ws] of S.config.workspaces.entries()) {
     const active = ws.id === S.config.activeWorkspace;
     const row = h('div.row.ws-row' + (active ? '.active' : ''), {
       html:
-        `<div class="rico">${tileSVG({ glyph: ws.icon?.glyph || 'layers', colors: gradientColors(ws.icon?.gradient || 'violeta'), style: ap().tileStyle === 'minimal' ? 'fluent' : ap().tileStyle, shape: ap().tileShape })}</div>` +
+        `<div class="rico">${wsIconHTML(ws, ap())}</div>` +
         `<div class="rtext"><div class="rname">${esc(ws.name)}</div><div class="rmeta">${ws.items.length} elementos${i < 9 ? ` · Ctrl+Alt+${i + 1}` : ''}</div></div>` +
         (active ? `<span style="color:var(--accent)">${gl('check')}</span>` : ''),
     });

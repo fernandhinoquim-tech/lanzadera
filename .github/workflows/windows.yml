@@ -39,11 +39,13 @@ jobs:
           LANZADERA_SMOKE: ${{ runner.temp }}\smoke
           LANZADERA_USER_DATA: ${{ runner.temp }}\userdata
         run: |
-          $exe = node -p "try { require('electron') } catch { '' }"
+          # Electron 44 descarga su ejecutable la primera vez que se pide; la ruta es la última línea.
+          node -e "require('electron')" | Out-Host
+          $exe = (node -p "require('electron')" | Select-Object -Last 1).Trim()
           if (!$exe -or !(Test-Path $exe)) {
             Write-Host "Electron no estaba descargado; instalando…"
-            node node_modules/electron/install.js
-            $exe = node -p "require('electron')"
+            node node_modules/electron/install.js | Out-Host
+            $exe = (node -p "require('electron')" | Select-Object -Last 1).Trim()
           }
           Write-Host "Electron: $exe"
           $p = Start-Process -FilePath $exe -ArgumentList "`"$PWD`"" -WorkingDirectory "$PWD" -PassThru -Wait -NoNewWindow

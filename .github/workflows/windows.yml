@@ -107,18 +107,37 @@ jobs:
           WANT=false
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ contains(github.event.head_commit.message, '[publicar]') }}" = "true" ]; then WANT=true; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publicar }}" = "true" ]; then WANT=true; fi
-          if [ "$WANT" = "true" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && ! gh release view "v$V" >/dev/null 2>&1; then
-            echo "publish=always" >> "$GITHUB_OUTPUT"
+          # Una versión ya publicada sin su instalador (publicación interrumpida) se completa.
+          if [ "$WANT" = "true" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && ! gh release view "v$V" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "Lanzadera-Setup-$V.exe"; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "Se publicará la versión v$V"
           else
-            echo "publish=never" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
             echo "Solo se compila: para publicar hace falta pedirlo en main ([publicar] o ejecución manual) con una versión nueva (v$V)."
           fi
 
+      # electron-builder solo compila: al publicar él mismo, a veces intenta crear la release
+      # dos veces a la vez y la deja sin instalador.
       - name: Compilar instalador
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Publicar en Releases
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --x64 --publish ${{ steps.version.outputs.publish }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          FILES=("dist/Lanzadera-Setup-$V.exe" "dist/Lanzadera-Setup-$V.exe.blockmap" "dist/latest.yml")
+          for f in "${FILES[@]}"; do [ -f "$f" ] || { echo "::error::Falta $f"; exit 1; }; done
+          sed "s/{{version}}/$V/g" build/notas-version.md > "$RUNNER_TEMP/notas.md"
+          if gh release view "v$V" >/dev/null 2>&1; then
+            gh release upload "v$V" "${FILES[@]}" --clobber
+            gh release edit "v$V" --title "Lanzadera $V" --notes-file "$RUNNER_TEMP/notas.md" --draft=false --latest
+          else
+            gh release create "v$V" "${FILES[@]}" --title "Lanzadera $V" --notes-file "$RUNNER_TEMP/notas.md" --target "$GITHUB_SHA" --latest
+          fi
+          gh release view "v$V" --json assets --jq '.assets[] | "\(.name)  \(.size) bytes"'
 
       - name: Guardar instalador como artefacto
         uses: actions/upload-artifact@v4

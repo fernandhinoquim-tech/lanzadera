@@ -216,6 +216,17 @@ async function run(ctx) {
       if (ok < targets.length / 2) throw new Error(`Solo ${ok} de ${targets.length} iconos`);
       return { ms: Date.now() - t0, results };
     });
+    await step('pantalla-completa', async () => {
+      const { FullscreenWatcher } = require('./fullscreen');
+      const fw = new FullscreenWatcher();
+      fw.start();
+      await wait(6000);
+      const alive = !!fw.child;
+      const line = fw.lastLine;
+      fw.stop();
+      if (!alive) throw new Error('El vigilante de pantalla completa no siguió activo');
+      return { line, display: fw.displayId };
+    });
     await step('miniatura', async () => {
       const t = await ctx.icons.thumbnail(txt, 128);
       return { ok: !!t };

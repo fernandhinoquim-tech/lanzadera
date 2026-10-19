@@ -41,6 +41,7 @@ function baseConfig() {
       webSearch: 'google',
       suggestions: true,
       fileSearch: true,
+      hideInFullscreen: true,
     },
     hotkeys: {
       search: 'Alt+Space',

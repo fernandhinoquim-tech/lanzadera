@@ -19,6 +19,7 @@ const { SearchIndex } = require('./search');
 const { createBackup } = require('./backup');
 const { DockManager, PanelWindow, SearchWindow, isWin11 } = require('./windows');
 const { createTray } = require('./tray');
+const { FullscreenWatcher } = require('./fullscreen');
 const { register } = require('./ipc');
 
 registerSchemes();
@@ -218,6 +219,9 @@ async function init() {
   ctx.updater.init();
   ctx.docks.sync();
   ctx.tray = createTray(ctx);
+  ctx.fullscreen = new FullscreenWatcher();
+  ctx.fullscreen.on('change', (id) => ctx.docks.setFullscreen(id));
+  if (!process.env.LANZADERA_SMOKE) ctx.fullscreen.start();
 
   let lastTheme = ctx.store.get().appearance.theme;
   ctx.store.on('change', (cfg) => {
@@ -226,6 +230,7 @@ async function init() {
       nativeTheme.themeSource = lastTheme;
     }
     ctx.docks.sync();
+    ctx.docks.setFullscreen(ctx.fullscreen.displayId);
     ctx.clip.apply();
     registerHotkeys();
     applyLoginItem();
@@ -268,4 +273,7 @@ app.on('window-all-closed', () => {
   // Lanzadera sigue activa en la bandeja aunque se cierren las ventanas.
 });
 app.on('before-quit', flushAll);
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  ctx.fullscreen?.stop();
+});

@@ -5,7 +5,8 @@ param(
   [Parameter(Mandatory = $true)][string]$Mode,
   [string]$In = '',
   [string]$Out = '',
-  [int]$Size = 256
+  [int]$Size = 256,
+  [int]$ParentPid = 0
 )
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
@@ -168,6 +169,65 @@ public static class LzIcons {
   }
   Write-Json @($res)
   exit 0
+}
+
+if ($Mode -eq 'watch') {
+  # Vigila si la ventana activa ocupa toda una pantalla (video o juego en pantalla completa).
+  $cs = @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public static class LzFg {
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+  [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+  [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] static extern IntPtr GetShellWindow();
+  [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr h);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
+
+  public static void Init() { try { SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch { } }
+
+  public static string State() {
+    IntPtr h = GetForegroundWindow();
+    if (h == IntPtr.Zero || h == GetShellWindow() || !IsWindowVisible(h) || IsZoomed(h)) return "0";
+    StringBuilder sb = new StringBuilder(256);
+    GetClassName(h, sb, 256);
+    string c = sb.ToString();
+    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd" || c == "Windows.UI.Core.CoreWindow" || c == "XamlExplorerHostIslandWindow") return "0";
+    RECT r;
+    if (!GetWindowRect(h, out r)) return "0";
+    MONITORINFO mi = new MONITORINFO();
+    mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+    if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return "0";
+    RECT m = mi.rcMonitor;
+    bool full = r.L <= m.L && r.T <= m.T && r.R >= m.R && r.B >= m.B;
+    return full ? ("1," + m.L + "," + m.T + "," + m.R + "," + m.B) : "0";
+  }
+}
+'@
+  Add-Type -TypeDefinition $cs
+  [LzFg]::Init()
+  $last = ''
+  $n = 0
+  while ($true) {
+    $s = [LzFg]::State()
+    if ($s -ne $last) {
+      [Console]::Out.WriteLine($s)
+      [Console]::Out.Flush()
+      $last = $s
+    }
+    Start-Sleep -Milliseconds 700
+    $n++
+    if ($ParentPid -gt 0 -and ($n % 6) -eq 0) {
+      if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) { exit 0 }
+    }
+  }
 }
 
 Write-Error "Modo desconocido: $Mode"

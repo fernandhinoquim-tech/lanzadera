@@ -47,6 +47,22 @@ class DockManager {
     this.store = store;
     this.wins = new Map();
     this.hidden = false;
+    this.fullscreenDisplay = null;
+  }
+
+  // Un programa en pantalla completa esconde el dock de esa pantalla.
+  setFullscreen(displayId) {
+    this.fullscreenDisplay = this.store.get().behavior.hideInFullscreen ? displayId : null;
+    this.applyVisibility();
+  }
+
+  applyVisibility() {
+    for (const [id, w] of this.wins) {
+      if (w.isDestroyed()) continue;
+      const show = !this.hidden && id !== this.fullscreenDisplay;
+      if (show && !w.isVisible()) w.showInactive();
+      if (!show && w.isVisible()) w.hide();
+    }
   }
 
   targetDisplays() {
@@ -107,7 +123,7 @@ class DockManager {
     hardenWebContents(win.webContents);
     win.loadURL(`${APP_URL}/dock/index.html`);
     win.once('ready-to-show', () => {
-      if (!this.hidden) win.showInactive();
+      if (!this.hidden && String(display.id) !== this.fullscreenDisplay) win.showInactive();
     });
     win.on('closed', () => {
       for (const [id, w] of this.wins) if (w === win) this.wins.delete(id);
@@ -121,10 +137,7 @@ class DockManager {
 
   toggle(force) {
     this.hidden = force === undefined ? !this.hidden : !force;
-    for (const w of this.all()) {
-      if (this.hidden) w.hide();
-      else w.showInactive();
-    }
+    this.applyVisibility();
   }
 
   setInteractive(win, interactive) {

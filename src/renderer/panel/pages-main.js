@@ -228,6 +228,7 @@ export function behaviorPage() {
       card({ icon: 'mouse-pointer-click', title: 'Abrir grupos y carpetas', control: seg([['click', 'Al hacer clic'], ['hover', 'Al pasar el mouse']], b.openStacksOn, (v) => set({ openStacksOn: v })) }),
       card({ icon: 'lock', title: 'Bloquear elementos', desc: 'Evita mover o quitar iconos sin querer.', control: toggle(b.locked, (v) => set({ locked: v })) }),
       card({ icon: 'power', title: 'Iniciar con Windows', control: toggle(b.launchAtLogin, (v) => set({ launchAtLogin: v })) }),
+      card({ icon: 'fullscreen', title: 'Esconder en pantalla completa', desc: 'Mientras ves un video o juegas, el dock de esa pantalla se esconde solo.', control: toggle(b.hideInFullscreen !== false, (v) => set({ hideInFullscreen: v })) }),
       card({ icon: 'sparkles', title: 'Sugerencias inteligentes', desc: 'Aprende qué programas usas a cada hora para el icono «Sugeridas» y el buscador.', control: toggle(b.suggestions, (v) => set({ suggestions: v })) })
     ),
     ...section('Atajos de teclado',

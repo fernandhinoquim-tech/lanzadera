@@ -54,4 +54,4 @@ function parseJSON(text) {
   }
 }
 
-module.exports = { isWin, runHelper, runCommand, parseJSON };
+module.exports = { isWin, runHelper, runCommand, parseJSON, helperPath };

@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { isWin, runHelper, parseJSON } = require('./winhelper');
 const { resolveAppPath } = require('./apps');
 
-const NEGATIVE_TTL = 3 * 24 * 3600 * 1000;
+const NEGATIVE_TTL = 6 * 3600 * 1000;
 const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml', ico: 'image/x-icon', avif: 'image/avif', jfif: 'image/jpeg' };
 
 function expandEnv(p) {
@@ -29,27 +29,31 @@ class IconService {
     return crypto.createHash('sha1').update(JSON.stringify(['v2', app || '', src || ''])).digest('hex').slice(0, 24);
   }
 
-  // Devuelve la ruta del PNG o null.
+  // Devuelve la ruta del PNG o null. El icono de baja resolución de respaldo se guarda
+  // aparte (.lo.png) para volver a intentar la alta resolución más tarde.
   async get({ app: appId, src }) {
     const key = this.key(appId, src);
     const file = path.join(this.dir, key + '.png');
     if (fs.existsSync(file)) return file;
+    const lo = path.join(this.dir, key + '.lo.png');
     const none = path.join(this.dir, key + '.none');
-    try {
-      const st = fs.statSync(none);
-      if (Date.now() - st.mtimeMs < NEGATIVE_TTL) return null;
-    } catch {}
+    const fresh = (p, ttl) => {
+      try {
+        return Date.now() - fs.statSync(p).mtimeMs < ttl;
+      } catch {
+        return false;
+      }
+    };
+    if (fresh(none, NEGATIVE_TTL)) return fs.existsSync(lo) ? lo : null;
 
     const source = this.resolveSource(appId, src);
     if (!source) return null;
-    let ok = false;
-    if (isWin) ok = await this.extractWin(key, source);
-    if (!ok && source.fsPath) ok = await this.extractElectron(source.fsPath, file);
-    if (ok && fs.existsSync(file)) return file;
+    if (isWin && (await this.extractWin(key, source)) && fs.existsSync(file)) return file;
+    if (!fs.existsSync(lo) && source.fsPath) await this.extractElectron(source.fsPath, lo);
     try {
       fs.writeFileSync(none, '');
     } catch {}
-    return null;
+    return fs.existsSync(lo) ? lo : null;
   }
 
   resolveSource(appId, src) {
@@ -97,7 +101,11 @@ class IconService {
       const res = await runHelper('icons', ['-In', input, '-Out', this.dir, '-Size', '256'], { timeout: 120000 });
       const parsed = parseJSON(res.stdout);
       results = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
-      if (!results.length && res.stderr) console.error('Extracción de iconos:', res.stderr.slice(0, 2000));
+      const errs = results.filter((r) => r.error).map((r) => r.error);
+      if (!results.length || errs.length) {
+        this.lastError = { code: res.code, stderr: res.stderr.slice(0, 3000), stdout: res.stdout.slice(0, 1000), errors: errs.slice(0, 5) };
+        console.error('Extracción de iconos:', this.lastError);
+      }
     } catch (e) {
       console.error('Extracción de iconos falló', e);
     } finally {

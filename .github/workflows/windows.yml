@@ -31,6 +31,16 @@ jobs:
       - name: Pruebas unitarias
         run: npm test
 
+      - name: Diagnóstico del ayudante de Windows (iconos en alta resolución)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $in = Join-Path $env:RUNNER_TEMP 'iconos.json'
+          '[{"key":"explorer","path":"C:\\Windows\\explorer.exe","index":0,"useIndex":false},{"key":"equipo","path":"shell:MyComputerFolder","index":0,"useIndex":false}]' | Set-Content -LiteralPath $in -Encoding utf8
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources\win\helper.ps1 -Mode icons -In $in -Out $env:RUNNER_TEMP -Size 256
+          Write-Host "Código: $LASTEXITCODE"
+          Get-ChildItem $env:RUNNER_TEMP -Filter *.png | Format-Table Name, Length
+
       - name: Prueba de humo (abre la app real y toma capturas)
         id: smoke
         shell: pwsh

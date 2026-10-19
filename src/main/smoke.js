@@ -25,7 +25,7 @@ async function run(ctx) {
     wc.on('console-message', (ev) => {
       const level = ev.level ?? ev.params?.level;
       const message = ev.message ?? ev.params?.message;
-      if (level === 'error' || level === 3) report.consoleErrors.push(String(message).slice(0, 500));
+      if ((level === 'error' || level === 3) && !/ResizeObserver loop/.test(message)) report.consoleErrors.push(String(message).slice(0, 500));
     });
     wc.on('render-process-gone', (e, d) => report.consoleErrors.push('render-process-gone ' + d.reason));
   }
@@ -247,8 +247,11 @@ async function run(ctx) {
         })
       );
       const ok = results.filter((r) => r.ok).length;
+      const sizes = {};
+      for (const r of results) if (r.ok) sizes[r.name] = require('electron').nativeImage.createFromPath(path.join(out, 'icons', r.name + '.png')).getSize().width;
       if (ok < targets.length / 2) throw new Error(`Solo ${ok} de ${targets.length} iconos`);
-      return { ms: Date.now() - t0, results };
+      if (!Object.values(sizes).some((w) => w >= 128)) throw new Error('Los iconos no salieron en alta resolución: ' + JSON.stringify({ sizes, error: ctx.icons.lastError }));
+      return { ms: Date.now() - t0, results, sizes, error: ctx.icons.lastError };
     });
     await step('pantalla-completa', async () => {
       const { FullscreenWatcher } = require('./fullscreen');

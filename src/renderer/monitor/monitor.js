@@ -66,6 +66,6 @@ function fit() {
     fit();
   });
   api.metricsSubscribe(true);
-  new ResizeObserver(fit).observe(root);
+  new ResizeObserver(() => requestAnimationFrame(fit)).observe(root);
   fit();
 })();

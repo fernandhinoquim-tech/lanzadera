@@ -254,7 +254,7 @@ export async function openPopup(item, anchor, opts = {}) {
     place(el, anchorRect);
     cur.el = el;
     // Si el contenido crece (p. ej. al llegar datos), se recoloca para no tapar el dock.
-    const ro = new ResizeObserver(() => el.isConnected && place(el, anchorRect));
+    const ro = new ResizeObserver(() => requestAnimationFrame(() => el.isConnected && place(el, anchorRect)));
     ro.observe(el);
     const prevCleanup = built.cleanup;
     built.cleanup = () => {

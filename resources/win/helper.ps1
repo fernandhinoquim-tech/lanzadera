@@ -66,19 +66,20 @@ public static class LzIcons {
       int w = tmp.Width, h = tmp.Height;
       if (Image.GetPixelFormatSize(tmp.PixelFormat) < 32) return new Bitmap(tmp);
       Rectangle r = new Rectangle(0, 0, w, h);
+      int row = w * 4;
+      byte[] buf = new byte[row * h];
+      // Copia fila por fila: el bitmap puede venir invertido (stride negativo).
       BitmapData src = tmp.LockBits(r, ImageLockMode.ReadOnly, tmp.PixelFormat);
-      int stride = Math.Abs(src.Stride);
-      byte[] buf = new byte[stride * h];
-      Marshal.Copy(src.Scan0, buf, 0, buf.Length);
-      tmp.UnlockBits(src);
+      try { for (int y = 0; y < h; y++) Marshal.Copy(IntPtr.Add(src.Scan0, y * src.Stride), buf, y * row, row); }
+      finally { tmp.UnlockBits(src); }
       bool alpha = false;
       for (int i = 3; i < buf.Length; i += 4) { if (buf[i] != 0) { alpha = true; break; } }
       if (!alpha) { for (int i = 3; i < buf.Length; i += 4) buf[i] = 255; }
       // El shell entrega alfa premultiplicado: usarlo tal cual evita bordes oscuros.
       Bitmap res = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
       BitmapData dst = res.LockBits(r, ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
-      for (int y = 0; y < h; y++) Marshal.Copy(buf, y * stride, IntPtr.Add(dst.Scan0, y * dst.Stride), w * 4);
-      res.UnlockBits(dst);
+      try { for (int y = 0; y < h; y++) Marshal.Copy(buf, y * row, IntPtr.Add(dst.Scan0, y * dst.Stride), row); }
+      finally { res.UnlockBits(dst); }
       return res;
     }
   }
@@ -106,11 +107,11 @@ public static class LzIcons {
   // Si el icono real es pequeno dentro del lienzo, lo recorta y lo centra.
   static Bitmap Normalize(Bitmap b, int size) {
     int w = b.Width, h = b.Height, minX = w, minY = h, maxX = -1, maxY = -1;
-    BitmapData d = b.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-    int stride = d.Stride;
+    int stride = w * 4;
     byte[] buf = new byte[stride * h];
-    Marshal.Copy(d.Scan0, buf, 0, buf.Length);
-    b.UnlockBits(d);
+    BitmapData d = b.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+    try { for (int y = 0; y < h; y++) Marshal.Copy(IntPtr.Add(d.Scan0, y * d.Stride), buf, y * stride, stride); }
+    finally { b.UnlockBits(d); }
     for (int y = 0; y < h; y++) {
       for (int x = 0; x < w; x++) {
         if (buf[y * stride + x * 4 + 3] > 10) {

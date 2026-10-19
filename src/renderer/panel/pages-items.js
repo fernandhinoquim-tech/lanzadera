@@ -389,7 +389,7 @@ export function workspacesPage(params) {
     const strip = h('div.ws-strip', { html: w.items.filter((x) => x.type !== 'separator').slice(0, 10).map((x) => `<span>${iconHTML(x, ap())}</span>`).join('') });
     cards.append(
       h('div.ws-card' + (active ? '.active' : ''),
-        h('div.top', ico, h('div', { style: { flex: 1, minWidth: 0 } }, name, h('div.muted', { style: { marginTop: '4px' }, text: `${w.items.length} elementos${i < 9 ? ` · Ctrl+Alt+${i + 1}` : ''}` }))),
+        h('div.top', ico, h('div', { style: { flex: 1, minWidth: 0 } }, name, h('div.muted', { style: { marginTop: '4px' }, text: `${w.items.length} elementos${i < 9 ? ` · Ctrl+Mayús+Alt+${i + 1}` : ''}` }))),
         strip,
         h('div.acts',
           active ? h('span.muted', { style: { alignSelf: 'center', marginRight: 'auto' }, html: `${gl('check')} En uso` }) : button('Usar ahora', () => patch({ activeWorkspace: w.id }), { primary: true, icon: 'eye' }),
@@ -431,7 +431,7 @@ export function workspacesPage(params) {
   };
   const pg = page(
     'Espacios de trabajo',
-    'Cada espacio es un dock distinto: Trabajo, Estudio, Juegos… Cambia con Ctrl+Alt+1…9, la rueda del mouse sobre el icono de Espacios o desde la bandeja.',
+    'Cada espacio es un dock distinto: Trabajo, Estudio, Juegos… Cambia con Ctrl+Mayús+Alt+1…9, la rueda del mouse sobre el icono de Espacios o desde la bandeja.',
     h('div.toolbar', button('Nuevo espacio vacío', () => newWs(false), { icon: 'plus', primary: true }), button('Duplicar el actual', () => newWs(true), { icon: 'copy' })),
     cards
   );

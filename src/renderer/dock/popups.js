@@ -420,7 +420,7 @@ function workspacesView() {
     const row = h('div.row.ws-row' + (active ? '.active' : ''), {
       html:
         `<div class="rico">${wsIconHTML(ws, ap())}</div>` +
-        `<div class="rtext"><div class="rname">${esc(ws.name)}</div><div class="rmeta">${ws.items.length} elementos${i < 9 ? ` · Ctrl+Alt+${i + 1}` : ''}</div></div>` +
+        `<div class="rtext"><div class="rname">${esc(ws.name)}</div><div class="rmeta">${ws.items.length} elementos${i < 9 ? ` · Ctrl+Mayús+Alt+${i + 1}` : ''}</div></div>` +
         (active ? `<span style="color:var(--accent)">${gl('check')}</span>` : ''),
     });
     row.addEventListener('click', () => {

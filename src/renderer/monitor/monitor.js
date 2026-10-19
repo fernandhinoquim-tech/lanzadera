@@ -51,7 +51,7 @@ function fit() {
 (async () => {
   state = await api.getState();
   applyTheme(state);
-  if (mode === 'full' && state.env.win11) document.documentElement.classList.add('mica');
+  if (mode === 'full' && state.env.mica) document.documentElement.classList.add('mica');
   mode === 'compact' ? renderCompact() : renderFull();
   api.onState((s) => {
     const prevTop = state.config.monitor.onTop;

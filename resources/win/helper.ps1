@@ -74,8 +74,9 @@ public static class LzIcons {
       bool alpha = false;
       for (int i = 3; i < buf.Length; i += 4) { if (buf[i] != 0) { alpha = true; break; } }
       if (!alpha) { for (int i = 3; i < buf.Length; i += 4) buf[i] = 255; }
-      Bitmap res = new Bitmap(w, h, PixelFormat.Format32bppArgb);
-      BitmapData dst = res.LockBits(r, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+      // El shell entrega alfa premultiplicado: usarlo tal cual evita bordes oscuros.
+      Bitmap res = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+      BitmapData dst = res.LockBits(r, ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
       for (int y = 0; y < h; y++) Marshal.Copy(buf, y * stride, IntPtr.Add(dst.Scan0, y * dst.Stride), w * 4);
       res.UnlockBits(dst);
       return res;
@@ -153,7 +154,7 @@ public static class LzIcons {
   }
 }
 '@
-  Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $cs
+  Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $cs -IgnoreWarnings
   $items = Get-Content -LiteralPath $In -Raw -Encoding UTF8 | ConvertFrom-Json
   $res = New-Object System.Collections.ArrayList
   foreach ($it in @($items)) {
@@ -388,7 +389,7 @@ public static class LzMet {
   }
 }
 '@
-  Add-Type -TypeDefinition $cs
+  Add-Type -TypeDefinition $cs -IgnoreWarnings
   [LzMet]::Run($ParentPid)
   exit 0
 }
@@ -433,7 +434,7 @@ public static class LzFg {
   }
 }
 '@
-  Add-Type -TypeDefinition $cs
+  Add-Type -TypeDefinition $cs -IgnoreWarnings
   [LzFg]::Init()
   $last = ''
   $n = 0

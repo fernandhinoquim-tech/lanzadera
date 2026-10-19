@@ -84,7 +84,7 @@ jobs:
             echo "Se publicará la versión v$V"
           else
             echo "publish=never" >> "$GITHUB_OUTPUT"
-            echo "La versión v$V ya existe o no es la rama main: solo se compila."
+            echo "Solo se compila: para publicar hace falta un commit en main con [publicar] y una versión nueva (v$V)."
           fi
 
       - name: Compilar instalador

@@ -3,6 +3,7 @@ const { shell } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { fileURLToPath } = require('url');
 const { isWin, runCommand } = require('./winhelper');
 const { resolveAppPath } = require('./apps');
 const { expandEnv } = require('./icons');
@@ -22,7 +23,7 @@ function spawnDetached(cmd, args) {
 async function openUrl(url) {
   if (BLOCKED_SCHEMES.test(url)) throw new Error('Dirección no permitida');
   if (/^file:/i.test(url)) {
-    const err = await shell.openPath(decodeURIComponent(new URL(url).pathname.replace(/^\/([a-z]:)/i, '$1')));
+    const err = await shell.openPath(fileURLToPath(url));
     if (err) throw new Error(err);
     return;
   }

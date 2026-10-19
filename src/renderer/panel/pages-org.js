@@ -295,7 +295,7 @@ export function welcomePage() {
       ['search', 'indigo', 'Alt + Espacio', 'Abre el buscador desde cualquier lugar.', '2328-fe0f'],
       ['mouse-pointer-2', 'oceano', 'Arrastra y suelta', 'Archivos o programas sobre el dock para fijarlos.', '1f4e5'],
       ['mouse-pointer-click', 'violeta', 'Clic derecho', 'Sobre el dock o un icono: todas las opciones.', '1f5b1-fe0f'],
-      ['layers', 'atardecer', 'Ctrl + Alt + 1, 2, 3', 'Cambia de espacio de trabajo.', '1f5c2-fe0f'],
+      ['layers', 'atardecer', 'Ctrl + Mayús + Alt + 1, 2, 3', 'Cambia de espacio de trabajo.', '1f5c2-fe0f'],
       ['inbox', 'menta', 'Estante', 'Suelta archivos ahí para tenerlos a mano.', '1f9fa'],
       ['wand-sparkles', 'aurora', 'Ordenar escritorio', 'Un clic y todo queda en su carpeta.', '1fa84'],
     ];

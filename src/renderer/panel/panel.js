@@ -103,7 +103,7 @@ window.addEventListener('hashchange', onRoute);
 (async () => {
   P.state = await api.getState();
   applyTheme(P.state);
-  if (P.env.win11) document.body.classList.add('mica');
+  if (P.env.mica) document.body.classList.add('mica');
   api.onState((s) => {
     P.state = s;
     applyTheme(s);

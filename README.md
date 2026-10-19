@@ -26,7 +26,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | 📥 | **Carpetas en vivo** | Descargas, Documentos o cualquier carpeta, con miniaturas y un contador de archivos nuevos. |
 | 🕘 | **Recientes** | Los últimos archivos que abriste en Windows. |
 | 🧺 | **Estante** | Suelta archivos ahí para tenerlos a mano; luego arrástralos a otra carpeta, correo o programa. |
-| 🧩 | **Espacios de trabajo** | Un dock distinto para *Trabajo*, *Estudio*, *Ocio*… Cambia con `Ctrl + Alt + 1…9` o la rueda del mouse. |
+| 🧩 | **Espacios de trabajo** | Un dock distinto para *Trabajo*, *Estudio*, *Ocio*… Cambia con `Ctrl + Mayús + Alt + 1…9` o la rueda del mouse. |
 | ⚡ | **Buscador rápido** | `Alt + Espacio`: apps, archivos, ajustes de Windows, comandos y **cuentas** (`80*15%`). `Ctrl + P` fija el resultado. |
 | ✨ | **Ordenar escritorio** | Acomoda los archivos sueltos en carpetas por tipo (Imágenes, PDF, Música…). Muestra una vista previa y **siempre se puede deshacer**. |
 | 🎨 | **Iconos 3D** | 1.238 iconos 3D al estilo de Windows 11 (Fluent de Microsoft) con buscador en español, como objeto libre o sobre mosaico. |
@@ -44,7 +44,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 |---|---|
 | `Alt + Espacio` | Abrir el buscador (si otro programa lo usa, se usa `Ctrl + Alt + Espacio`) |
 | `Ctrl + Alt + D` | Mostrar u ocultar el dock |
-| `Ctrl + Alt + 1…9` | Cambiar de espacio de trabajo |
+| `Ctrl + Mayús + Alt + 1…9` | Cambiar de espacio de trabajo |
 | Clic derecho | Menú con todas las opciones (sobre el dock o un icono) |
 | `Ctrl + Mayús + clic` | Abrir un programa como administrador |
 | Arrastrar un icono fuera del dock | Quitarlo (con «Deshacer») |

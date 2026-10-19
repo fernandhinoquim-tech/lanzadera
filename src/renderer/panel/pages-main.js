@@ -65,7 +65,7 @@ export function homePage() {
       card({ icon: 'keyboard', title: 'Teclado y mouse', col: true, control: h('div.keys', { html: [
         [hk('search'), 'Buscar apps, archivos, ajustes y hacer cuentas'],
         [hk('toggleDock'), 'Mostrar u ocultar el dock'],
-        ['Ctrl + Alt + 1…9', 'Cambiar de espacio de trabajo'],
+        ['Ctrl + Mayús + Alt + 1…9', 'Cambiar de espacio de trabajo'],
         ['Clic derecho', 'Menú con todas las opciones (sobre el dock o un icono)'],
         ['Arrastrar', 'Suelta archivos sobre el dock, un grupo, el estante o la papelera'],
         ['Ctrl + Mayús + clic', 'Abrir un programa como administrador'],
@@ -256,7 +256,7 @@ export function behaviorPage() {
       card({ icon: 'search', title: 'Abrir el buscador', desc: 'Recomendado: Alt + Espacio.' + warn('search'), control: hotkeyInput('search') }),
       card({ icon: 'eye-off', title: 'Mostrar u ocultar el dock', desc: warn('toggleDock'), control: hotkeyInput('toggleDock') }),
       card({ icon: 'wand-sparkles', title: 'Ordenar el escritorio', desc: 'Opcional.' + warn('organize'), control: hotkeyInput('organize') }),
-      card({ icon: 'layers', title: 'Cambiar de espacio con Ctrl + Alt + 1…9', control: toggle(P.config.hotkeys.workspaces, (v) => patch({ hotkeys: { workspaces: v } })) })
+      card({ icon: 'layers', title: 'Cambiar de espacio con Ctrl + Mayús + Alt + 1…9', desc: 'Incluye Mayús para no bloquear AltGr (@, #, |) en teclados en español.', control: toggle(P.config.hotkeys.workspaces, (v) => patch({ hotkeys: { workspaces: v } })) })
     ),
     ...section('Buscador',
       card({ icon: 'globe', title: 'Buscar en la web con', control: select([['google', 'Google'], ['bing', 'Bing'], ['duckduckgo', 'DuckDuckGo']], b.webSearch, (v) => set({ webSearch: v })) }),

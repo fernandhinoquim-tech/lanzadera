@@ -18,10 +18,17 @@ function webPrefs(extra = {}) {
   };
 }
 
+function winBuild() {
+  return process.platform === 'win32' ? Number(os.release().split('.')[2] || 0) : 0;
+}
+
 function isWin11() {
-  if (process.platform !== 'win32') return false;
-  const build = Number(os.release().split('.')[2] || 0);
-  return build >= 22000;
+  return winBuild() >= 22000;
+}
+
+// El material Mica de Electron necesita Windows 11 22H2 (compilación 22621).
+function supportsMica() {
+  return winBuild() >= 22621;
 }
 
 function hardenWebContents(wc) {
@@ -161,7 +168,7 @@ class PanelWindow {
       return this.win;
     }
     const dark = nativeTheme.shouldUseDarkColors;
-    const win11 = isWin11();
+    const win11 = supportsMica();
     this.win = new BrowserWindow({
       width: 1120,
       height: 780,
@@ -189,7 +196,7 @@ class PanelWindow {
     try {
       this.win.setTitleBarOverlay({ color: '#00000000', symbolColor: dark ? '#ffffff' : '#1a1a1a', height: 40 });
     } catch {}
-    if (!isWin11()) this.win.setBackgroundColor(dark ? '#1c1c1f' : '#f3f3f5');
+    if (!supportsMica()) this.win.setBackgroundColor(dark ? '#1c1c1f' : '#f3f3f5');
   }
 }
 
@@ -328,7 +335,7 @@ class MonitorWindows {
       return this.full;
     }
     const dark = nativeTheme.shouldUseDarkColors;
-    const win11 = isWin11();
+    const win11 = supportsMica();
     this.full = new BrowserWindow({
       width: 1060,
       height: 800,
@@ -352,4 +359,4 @@ class MonitorWindows {
   }
 }
 
-module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11 };
+module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica };

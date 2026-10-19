@@ -17,7 +17,7 @@ const { FolderWatcher } = require('./folders');
 const { Updater } = require('./updater');
 const { SearchIndex } = require('./search');
 const { createBackup } = require('./backup');
-const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11 } = require('./windows');
+const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica } = require('./windows');
 const { Metrics } = require('./metrics');
 const { createTray } = require('./tray');
 const { FullscreenWatcher } = require('./fullscreen');
@@ -74,6 +74,7 @@ function state() {
       accent: systemAccent(),
       platform: process.platform,
       win11: isWin11(),
+      mica: supportsMica(),
       version: app.getVersion(),
       paths: ctx.paths,
       displays: screen.getAllDisplays().map((d, i) => ({
@@ -124,7 +125,7 @@ function registerHotkeys(force = false) {
   reg('organize', hk.organize, () => ctx.panel.open('/organizador'));
   if (hk.workspaces) {
     for (let i = 1; i <= 9; i++) {
-      reg('ws' + i, `Control+Alt+${i}`, () => {
+      reg('ws' + i, `Control+Alt+Shift+${i}`, () => {
         const ws = ctx.store.get().workspaces[i - 1];
         if (ws) ctx.store.patch({ activeWorkspace: ws.id });
       });

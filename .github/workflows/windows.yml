@@ -39,7 +39,14 @@ jobs:
           LANZADERA_SMOKE: ${{ runner.temp }}\smoke
           LANZADERA_USER_DATA: ${{ runner.temp }}\userdata
         run: |
-          $p = Start-Process -FilePath "node_modules\electron\dist\electron.exe" -ArgumentList "." -PassThru -Wait -NoNewWindow
+          $exe = node -p "try { require('electron') } catch { '' }"
+          if (!$exe -or !(Test-Path $exe)) {
+            Write-Host "Electron no estaba descargado; instalando…"
+            node node_modules/electron/install.js
+            $exe = node -p "require('electron')"
+          }
+          Write-Host "Electron: $exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "`"$PWD`"" -WorkingDirectory "$PWD" -PassThru -Wait -NoNewWindow
           $code = $p.ExitCode
           if (Test-Path "$env:LANZADERA_SMOKE\report.json") { Get-Content "$env:LANZADERA_SMOKE\report.json" }
           else { Write-Host "No se generó el reporte" }
@@ -71,7 +78,8 @@ jobs:
         run: |
           V=$(node -p "require('./package.json').version")
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && ! gh release view "v$V" >/dev/null 2>&1; then
+          # Solo se publica si el commit lo pide con [publicar] y la versión no existe todavía.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ contains(github.event.head_commit.message, '[publicar]') }}" = "true" ] && ! gh release view "v$V" >/dev/null 2>&1; then
             echo "publish=always" >> "$GITHUB_OUTPUT"
             echo "Se publicará la versión v$V"
           else

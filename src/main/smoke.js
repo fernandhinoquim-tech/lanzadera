@@ -272,6 +272,7 @@ async function run(ctx) {
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
   console.log('SMOKE', report.ok ? 'OK' : 'FALLÓ', JSON.stringify({ critical: report.critical, consoleErrors: report.consoleErrors.slice(0, 10) }));
   ctx.store.flush();
+  ctx.metrics.stop();
   setTimeout(() => app.exit(report.ok ? 0 : 1), 300);
 }
 

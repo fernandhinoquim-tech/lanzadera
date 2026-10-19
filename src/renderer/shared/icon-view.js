@@ -108,7 +108,7 @@ function groupPreview(item, ap) {
   const kids = item.items.slice(0, 4);
   const cells = kids.map((k) => `<span class="gp-cell">${iconHTML(k, ap, { mini: true })}</span>`).join('');
   const bg = tileSVG({ content: '', colors: gradientColors(item.icon?.gradient || 'grafito'), style: 'glass', shape: ap.tileShape });
-  return `<span class="group-ico">${bg}<span class="gp-grid">${cells}</span></span>`;
+  return `<span class="group-ico">${bg}<span class="gp-grid n${kids.length}">${cells}</span></span>`;
 }
 
 // Icono para un archivo listado en una pila de carpeta.

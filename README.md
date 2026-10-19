@@ -67,9 +67,9 @@ npm run dist       # crea el instalador (en Windows)
 ```
 
 - `src/main` — proceso principal (ventanas, iconos de Windows, organizador, buscador, portapapeles).
-- `src/renderer/dock` — la barra; `panel` — configuración; `search` — buscador; `shared` — iconos de diseño.
-- `resources/win/helper.ps1` — extrae iconos a 256 px y lista las apps del menú Inicio.
-- Cada cambio en `main` compila el instalador en Windows (GitHub Actions) y ejecuta una prueba de humo que abre la app real y guarda capturas en la rama `ci-reports`. Si la versión de `package.json` es nueva, se publica sola en *Releases*.
+- `src/renderer/dock` — la barra; `panel` — configuración; `search` — buscador; `monitor` — monitor de rendimiento; `shared` — iconos de diseño y gráficas.
+- `resources/win/helper.ps1` — extrae iconos a 256 px, lista las apps del menú Inicio, recoge las métricas del PC (CPU, GPU, red, disco, temperaturas) y detecta juegos o videos en pantalla completa.
+- Cada cambio en `main` compila el instalador en Windows (GitHub Actions) y ejecuta una prueba de humo que abre la app real y guarda capturas en la rama `ci-reports`. Para publicar en *Releases*, sube la versión en `package.json` y escribe `[publicar]` en el mensaje del commit, o ejecuta el flujo a mano marcando «publicar»; solo se publica si la prueba de humo pasa.
 
 ## Licencia
 

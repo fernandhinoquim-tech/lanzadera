@@ -143,6 +143,23 @@ svg.gl {
   min-height: 0;
 }
 
+/* Con pocos elementos, la vista previa los muestra más grandes en vez de dejar huecos. */
+.gp-grid.n1 {
+  inset: 21%;
+  grid-template: 1fr / 1fr;
+}
+
+.gp-grid.n2 {
+  inset: 35.5% 19%;
+  grid-template-rows: 1fr;
+}
+
+.gp-grid.n3 .gp-cell:nth-child(3) {
+  grid-column: 1 / span 2;
+  justify-self: center;
+  width: 46%;
+}
+
 .gp-cell .ico-img {
   filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3));
 }

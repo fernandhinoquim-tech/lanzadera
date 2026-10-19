@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: Publicar la versión de package.json en Releases (si la prueba de humo pasa)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -66,6 +71,8 @@ jobs:
 
       - name: Publicar capturas en la rama ci-reports
         if: always() && github.event_name != 'pull_request'
+        # Las capturas son informativas: un fallo de GitHub al subirlas no debe frenar el instalador.
+        continue-on-error: true
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,7 +87,12 @@ jobs:
           git checkout -q -b ci-reports
           git add -A
           git commit -q -m "Capturas de $env:GITHUB_SHA"
-          git push -f -q "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" ci-reports
+          foreach ($i in 1..4) {
+            git push -f -q "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" ci-reports
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Start-Sleep -Seconds (5 * $i)
+          }
+          exit 1
 
       - name: ¿Hay una versión nueva para publicar?
         id: version
@@ -90,13 +102,17 @@ jobs:
         run: |
           V=$(node -p "require('./package.json').version")
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          # Solo se publica si el commit lo pide con [publicar] y la versión no existe todavía.
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ contains(github.event.head_commit.message, '[publicar]') }}" = "true" ] && ! gh release view "v$V" >/dev/null 2>&1; then
+          # Solo se publica desde main, si se pide (commit con [publicar] o ejecución manual con
+          # «publicar») y la versión no existe todavía.
+          WANT=false
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ contains(github.event.head_commit.message, '[publicar]') }}" = "true" ]; then WANT=true; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publicar }}" = "true" ]; then WANT=true; fi
+          if [ "$WANT" = "true" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && ! gh release view "v$V" >/dev/null 2>&1; then
             echo "publish=always" >> "$GITHUB_OUTPUT"
             echo "Se publicará la versión v$V"
           else
             echo "publish=never" >> "$GITHUB_OUTPUT"
-            echo "Solo se compila: para publicar hace falta un commit en main con [publicar] y una versión nueva (v$V)."
+            echo "Solo se compila: para publicar hace falta pedirlo en main ([publicar] o ejecución manual) con una versión nueva (v$V)."
           fi
 
       - name: Compilar instalador

@@ -110,6 +110,17 @@ body {
   gap: 4px;
 }
 
+/* Con menos de tres sensores, los medidores de temperatura quedan centrados. */
+.gsec.g-temp {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.gsec.g-temp .gitem {
+  width: calc((100% - 8px) / 3);
+}
+
 .gsec.g-io {
   grid-template-columns: 1fr;
   gap: 2px;

@@ -356,6 +356,23 @@ async function run(ctx) {
       const res = await dockplan.desktopGroups(ctx.paths);
       return { count: res.count, groups: res.groups.map((g) => [g.name, g.items.map((i) => i.name)]) };
     });
+    // Último paso de Windows: al cerrar, el ayudante suelta la franja aunque nadie se lo pida.
+    await step('soltar-al-salir', async () => {
+      ctx.store.patch({ position: { windows: 'top', idle: 'normal' } });
+      await wait(1500);
+      const before = screen.getPrimaryDisplay().workArea;
+      ctx.store.patch({ position: { windows: 'reserve' } });
+      await wait(3000);
+      const reserved = screen.getPrimaryDisplay().workArea;
+      const t0 = Date.now();
+      await ctx.shell.stop();
+      const stopMs = Date.now() - t0;
+      await wait(2000);
+      const after = screen.getPrimaryDisplay().workArea;
+      if (reserved.height >= before.height) throw new Error('No se reservó la franja: ' + JSON.stringify({ before, reserved }));
+      if (after.height !== before.height) throw new Error('La franja quedó reservada al cerrar el ayudante: ' + JSON.stringify({ before, reserved, after }));
+      return { before, reserved, after, stopMs };
+    });
     await step('miniatura', async () => {
       const t = await ctx.icons.thumbnail(txt, 128);
       return { ok: !!t };

@@ -1,9 +1,9 @@
 // Panel de rendimiento: tarjetas con gráficas en vivo (se usa en el dock, el monitor flotante y la ventana completa).
 import { h, esc } from './dom.js';
-import { chartSVG, ringSVG, fmtBytes, fmtRate, METRIC_COLORS as C } from './charts.js';
+import { chartSVG, ringSVG, gaugeSVG, fmtBytes, fmtRate, METRIC_COLORS as C, ZONE_TEXT } from './charts.js';
 import { fluentUrl } from './icon-view.js';
 
-const ICON = { cpu: '1f4bb', mem: '1f4df', gpu: '1f3ae', net: '1f6dc', disk: '1f4be', procs: '1f4ca', sys: '1f50b' };
+const ICON = { cpu: '1f4bb', mem: '1f4df', gpu: '1f3ae', net: '1f6dc', disk: '1f4be', procs: '1f4ca', sys: '1f50b', temp: '1f321-fe0f' };
 
 function uptime(s) {
   const d = Math.floor(s / 86400);
@@ -42,9 +42,10 @@ export function createDashboard({ mode = 'full' } = {}) {
   const gpu = card('gpu', 'Gráfica');
   const net = card('net', 'Red');
   const disk = card('disk', 'Disco');
+  const temps = compact ? null : card('temp', 'Temperaturas', '.wide');
   const procs = compact ? null : card('procs', 'Programas que más consumen', '.wide');
   const sys = compact ? null : card('sys', 'Sistema', '.wide');
-  for (const c of [cpu, mem, gpu, net, disk, procs, sys]) if (c) root.append(c.el);
+  for (const c of [temps, cpu, mem, gpu, net, disk, procs, sys]) if (c) root.append(c.el);
   const chartH = compact ? 46 : 84;
 
   const update = ({ now, hist } = {}) => {
@@ -110,6 +111,23 @@ export function createDashboard({ mode = 'full' } = {}) {
               return `<div class="drive"><div class="mkv"><span>${esc(v.name.replace(/\\$/, ''))} ${esc(v.label || '')}</span><b>${fmtBytes(v.free)} libres de ${fmtBytes(v.total)}</b></div>${bar(used, used > 90 ? ['#fca5a5', '#dc2626'] : C.dr)}</div>`;
             })
             .join('')}</div>`);
+
+    // Temperaturas: medidores con zona normal, de cuidado y crítica
+    if (temps) {
+      const list = now.sensors || [];
+      const worst = list.filter((s) => s.zone !== 'ok').sort((a, b) => b.value - b.critical - (a.value - a.critical))[0];
+      temps.val.innerHTML = worst ? `<span class="tz-${worst.zone}" style="font-size:14px">${ZONE_TEXT[worst.zone]}</span>` : '';
+      temps.sub.textContent = list.length ? 'Amarillo: cuidado · Rojo: crítico' : '';
+      temps.body.innerHTML = list.length
+        ? `<div class="tgauges">${list
+            .map(
+              (s) =>
+                `<div class="tgauge"><div class="tg-viz">${gaugeSVG({ value: s.value, min: 20, max: s.max, zones: s, unit: '°', status: ZONE_TEXT[s.zone] })}</div>` +
+                `<div><b>${esc(s.label)}</b><small>${esc(s.source)}</small><small>Cuidado desde ${s.caution} °C · Crítico desde ${s.critical} °C</small><small>Límites ${esc(s.limits)}</small></div></div>`
+            )
+            .join('')}</div>`
+        : '<div class="mna">Este equipo no comparte temperaturas con Windows sin permisos especiales. La de la tarjeta gráfica y la de los discos SSD aparecen cuando su controlador las informa.</div>';
+    }
 
     // Procesos
     if (procs) {

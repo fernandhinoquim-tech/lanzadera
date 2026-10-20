@@ -59,6 +59,73 @@ export function ringSVG(pct, colors, { size = 100, stroke = 10, label } = {}) {
   return `<svg viewBox="0 0 ${size} ${size}" class="ring-svg"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${colors[0]}"/><stop offset="1" stop-color="${colors[1]}"/></linearGradient></defs><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".1" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${((c * v) / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})" style="transition:stroke-dasharray .6s"/>${label ? `<text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" font-size="${size * 0.22}" font-weight="700" fill="currentColor">${label}</text>` : ''}</svg>`;
 }
 
+// ---------- Medidor circular (arco de 240°) ----------
+
+export const ZONE_COLORS = {
+  ok: ['#6ee7b7', '#10b981'],
+  warn: ['#fde68a', '#f59e0b'],
+  crit: ['#fca5a5', '#ef4444'],
+};
+export const ZONE_TEXT = { ok: 'Normal', warn: 'Cuidado', crit: 'Crítico' };
+
+const A0 = 150;
+const SWEEP = 240;
+
+function polar(cx, cy, r, deg) {
+  const a = (deg * Math.PI) / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+
+function arcPath(cx, cy, r, d1, d2) {
+  if (d2 - d1 < 0.01) d2 = d1 + 0.01;
+  const [x1, y1] = polar(cx, cy, r, d1);
+  const [x2, y2] = polar(cx, cy, r, d2);
+  return `M${x1.toFixed(2)},${y1.toFixed(2)}A${r},${r} 0 ${d2 - d1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`;
+}
+
+/**
+ * Medidor tipo velocímetro. Con zones ({ caution, critical }) dibuja la banda verde, amarilla
+ * y roja por fuera y colorea el valor según la zona en la que está.
+ */
+export function gaugeSVG({ value, min = 0, max = 100, colors, zones, text, unit = '', status, statusColor }) {
+  const cx = 50;
+  const cy = 52;
+  const r = 37;
+  const id = 'q' + (++seq).toString(36);
+  const has = Number.isFinite(value);
+  const clamp = (v) => Math.max(min, Math.min(max, v));
+  const ang = (v) => A0 + (SWEEP * (clamp(v) - min)) / (max - min);
+  const zone = zones && has ? (value >= zones.critical ? 'crit' : value >= zones.caution ? 'warn' : 'ok') : null;
+  const [c1, c2] = zone ? ZONE_COLORS[zone] : colors || ['#94a3b8', '#64748b'];
+  let band = '';
+  if (zones) {
+    const rb = 45.5;
+    const segs = [
+      [min, zones.caution, ZONE_COLORS.ok[1]],
+      [zones.caution, zones.critical, ZONE_COLORS.warn[1]],
+      [zones.critical, max, ZONE_COLORS.crit[1]],
+    ];
+    band = segs.map(([a, b, col]) => `<path d="${arcPath(cx, cy, rb, ang(a) + 0.8, ang(b) - 0.8)}" stroke="${col}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".85"/>`).join('');
+  }
+  const end = has ? ang(value) : A0;
+  const [mx, my] = polar(cx, cy, r, end);
+  const main = has ? `<path d="${arcPath(cx, cy, r, A0, end)}" stroke="url(#${id})" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#${id}f)"/>` : '';
+  const dot = has ? `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="5.2" fill="#fff" stroke="${c2}" stroke-width="2.4"/>` : '';
+  const label = text ?? (has ? String(Math.round(value)) : '—');
+  return (
+    `<svg viewBox="0 0 100 92" class="gauge${zone ? ' z-' + zone : ''}" aria-hidden="true">` +
+    `<defs><linearGradient id="${id}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>` +
+    `<filter id="${id}f" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="${c2}" flood-opacity=".55"/></filter></defs>` +
+    band +
+    `<path d="${arcPath(cx, cy, r, A0, A0 + SWEEP)}" stroke="currentColor" stroke-opacity=".1" stroke-width="8" fill="none" stroke-linecap="round"/>` +
+    main +
+    dot +
+    `<text x="50" y="${status ? 50 : 54}" text-anchor="middle" dominant-baseline="central" class="gv-num">${label}<tspan class="gv-unit" dx="1" dy="-6">${unit}</tspan></text>` +
+    (status ? `<text x="50" y="68" text-anchor="middle" class="gv-status" fill="${statusColor || c2}">${status}</text>` : '') +
+    `</svg>`
+  );
+}
+
 export function fmtBytes(n, digits = 1) {
   if (!Number.isFinite(n)) return '—';
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];

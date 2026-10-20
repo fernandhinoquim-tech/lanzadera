@@ -276,3 +276,73 @@
   color: var(--text-3);
   background: none;
 }
+
+/* Medidor circular (uso y temperaturas) */
+.gauge {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--text);
+}
+
+.gauge .gv-num {
+  font: 700 21px var(--font-display);
+  fill: currentColor;
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge .gv-unit {
+  font: 600 10px var(--font);
+  fill: var(--text-3);
+}
+
+.gauge .gv-status {
+  font: 700 8.5px var(--font);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Temperaturas en el monitor completo */
+.tgauges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.tgauge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 230px;
+  flex: 1;
+}
+
+.tgauge .tg-viz {
+  width: 104px;
+  height: 96px;
+  flex: none;
+}
+
+.tgauge b {
+  display: block;
+  font-size: 13.5px;
+}
+
+.tgauge small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.tgauge .tz-ok {
+  color: #10b981;
+}
+
+.tgauge .tz-warn {
+  color: #f59e0b;
+}
+
+.tgauge .tz-crit {
+  color: #ef4444;
+}

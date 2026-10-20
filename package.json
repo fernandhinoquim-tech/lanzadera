@@ -1,7 +1,7 @@
 {
   "name": "lanzadera",
   "productName": "Lanzadera",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Dock organizador para el escritorio de Windows 11: barra con efecto lupa, grupos, espacios de trabajo, buscador, organizador y widgets.",
   "main": "src/main/main.js",
   "author": {

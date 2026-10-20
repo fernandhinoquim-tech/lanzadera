@@ -34,7 +34,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | ✨ | **Ordenar escritorio** | Acomoda los archivos sueltos en carpetas por tipo (Imágenes, PDF, Música…). Muestra una vista previa y **siempre se puede deshacer**. |
 | 🎨 | **Iconos 3D** | 1.238 iconos 3D al estilo de Windows 11 (Fluent de Microsoft) con buscador en español, como objeto libre o sobre mosaico. |
 | ✏️ | **Iconos de línea** | Banco de 1.850 iconos con 7 estilos (Degradado, Brillante 3D, Vidrio, Neón, Pastel, Sólido, Mínimo), 19 degradados, colores propios, emoji, letras, o **tus propias imágenes**. |
-| 📈 | **Monitor de rendimiento** | Un panel en el escritorio con gráficas en vivo (CPU, RAM, gráfica, red, disco) y un monitor completo con núcleos, velocidad real, temperatura, memoria de video, unidades, batería y programas que más consumen. Si quieres, también como widgets en la barra. |
+| 📈 | **Monitor de rendimiento** | Un panel en el escritorio con medidores de CPU, RAM y gráfica, red y disco, y **temperaturas** del procesador, la tarjeta gráfica y los SSD en medidores con zona verde, amarilla (cuidado) y roja (crítico). Al pasar el puntero muestra el detalle; avisa si algo se calienta demasiado. |
 | 🖼️ | **Iconos originales en HD** | Los iconos de tus programas se extraen de Windows a 256 px para que se vean nítidos al agrandarse. |
 | ⏰ | **Widgets** | Reloj con calendario, historial del portapapeles y notas rápidas. |
 | 🤖 | **Sugerencias** | El icono «Sugeridas» aprende qué programas usas a cada hora. |

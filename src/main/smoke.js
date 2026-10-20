@@ -156,7 +156,7 @@ async function run(ctx) {
     const snap = ctx.metrics.snapshot();
     if (!snap) throw new Error('Sin muestras de rendimiento');
     const n = snap.now;
-    const info = { cpu: n.cpu, cores: n.cores.length, mem: n.mem, gpu: n.gpu, net: n.net, disk: n.disk, mhz: n.mhz, temps: n.temps, battery: n.battery, drives: n.drives, procs: n.procs && { count: n.procs.count, top: n.procs.cpu?.slice(0, 3) }, samplerError: ctx.metrics.lastError };
+    const info = { cpu: n.cpu, cores: n.cores.length, mem: n.mem, gpu: n.gpu, net: n.net, disk: n.disk, mhz: n.mhz, temps: n.temps, sensors: n.sensors, raw: { gperf: ctx.metrics.win?.gperf, dtemps: ctx.metrics.win?.dtemps }, battery: n.battery, drives: n.drives, procs: n.procs && { count: n.procs.count, top: n.procs.cpu?.slice(0, 3) }, samplerError: ctx.metrics.lastError };
     if (process.platform === 'win32' && !n.net && !n.disk) throw new Error('El recolector de Windows no envió datos: ' + JSON.stringify(info));
     return info;
   });
@@ -166,8 +166,18 @@ async function run(ctx) {
     const w = ctx.monitor.gadget;
     if (!w) throw new Error('No se abrió el monitor flotante');
     await shot(w, '15-monitor-flotante');
+    // Detalle al pasar el puntero: uso del procesador y la primera temperatura.
+    const hover = (sel) => w.webContents.executeJavaScript(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true })); return !!el; })()`);
+    await hover('.gitem[data-k="cpu"]');
+    await wait(1200);
+    await shot(w, '15b-monitor-detalle-cpu');
+    const temp = await hover('.g-temp .gitem');
+    await wait(1200);
+    await shot(w, '15c-monitor-detalle-temperatura');
+    const items = await w.webContents.executeJavaScript(`[...document.querySelectorAll('.gitem')].map((e) => e.dataset.k)`);
     ctx.store.patch({ monitor: { gadget: false } });
     await wait(500);
+    return { items, temp };
   });
   await step('monitor-completo', async () => {
     const w = ctx.monitor.openFull();

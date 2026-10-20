@@ -54,7 +54,7 @@ function baseConfig() {
     },
     clipboard: { enabled: true, max: 40, persist: false },
     clock: { hour12: false, seconds: false },
-    monitor: { gadget: true, onTop: false, opacity: 0.96, bounds: null },
+    monitor: { gadget: true, onTop: false, opacity: 0.96, bounds: null, alerts: true },
     workspaces: [],
     activeWorkspace: null,
     shelf: [],

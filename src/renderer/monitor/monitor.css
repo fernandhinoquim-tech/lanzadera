@@ -13,10 +13,13 @@ body {
 
 .gadget {
   margin: 6px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--popup-bg) 96%, #fff 4%), var(--popup-bg));
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, #10b981 10%, transparent), transparent 60%),
+    var(--popup-bg);
   border: 1px solid var(--border-strong);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
@@ -24,7 +27,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 8px 6px 14px;
+  padding: 10px 8px 4px 16px;
   -webkit-app-region: drag;
   cursor: move;
 }
@@ -32,6 +35,7 @@ body {
 .ghead b {
   flex: 1;
   font: 600 13px var(--font-display);
+  letter-spacing: 0.2px;
 }
 
 .ghead .live {
@@ -67,8 +71,409 @@ body {
   color: var(--accent);
 }
 
+/* Aviso de temperatura en el encabezado */
+.gchip {
+  display: none;
+  -webkit-app-region: no-drag;
+  font: 600 11px var(--font);
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.gchip.z-warn,
+.gchip.z-crit {
+  display: inline-block;
+}
+.gchip.z-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+}
+.gchip.z-crit {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  animation: pulse 1.2s infinite;
+}
+
 .gbody {
-  padding: 4px 8px 8px;
+  padding: 2px 10px 10px;
+}
+
+/* ---------- Vista del monitor ---------- */
+.gview {
+  display: flex;
+  flex-direction: column;
+}
+
+.gsec {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.gsec.g-io {
+  grid-template-columns: 1fr;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.glabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 6px 2px;
+  font: 600 10.5px var(--font);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.glegend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 10.5px;
+}
+.glegend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-left: 5px;
+}
+.glegend .ok {
+  background: #10b981;
+}
+.glegend .warn {
+  background: #f59e0b;
+}
+.glegend .crit {
+  background: #ef4444;
+}
+
+.gitem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 4px 2px 8px;
+  border-radius: 14px;
+  min-width: 0;
+  transition: background 0.15s, transform 0.15s var(--ease);
+  cursor: default;
+}
+
+.gitem:hover,
+.gitem.active {
+  background: var(--surface-2);
+}
+
+.gitem .gviz {
+  width: 86px;
+  height: 79px;
+}
+
+.gitem b {
+  font: 600 12px var(--font);
+  margin-top: -2px;
+}
+
+.gitem > span {
+  font-size: 10.5px;
+  color: var(--text-3);
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gitem.hot .gviz {
+  animation: hot 1.2s ease-in-out infinite;
+}
+
+@keyframes hot {
+  50% {
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8));
+  }
+}
+
+/* Filas de red y disco */
+.grow {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+}
+
+.grow .gri {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.grow .gri svg {
+  width: 17px;
+  height: 17px;
+}
+
+.grow .grt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.grow .grt b {
+  margin: 0;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.grow .grt span {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grow .grc {
+  width: 112px;
+  height: 32px;
+  flex: none;
+}
+
+.grow .grc .chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* Detalle que se despliega al pasar el puntero */
+.gdrawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.26s var(--ease), opacity 0.2s, margin 0.26s var(--ease);
+}
+
+.gdrawer.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin: 4px 0 6px;
+}
+
+.gdin {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.gdrawer.open .gdin {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.dchart {
+  height: 54px;
+  margin-bottom: 6px;
+}
+
+.dchart .chart {
+  width: 100%;
+  height: 100%;
+}
+
+.dkv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+
+.dkv span {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.dkv b {
+  font-weight: 600;
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin: 2px 0 4px;
+}
+
+.dbar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s var(--ease);
+}
+
+.dcores {
+  display: flex;
+  gap: 2px;
+  height: 18px;
+  align-items: flex-end;
+  margin: 4px 0 6px;
+}
+
+.dcores i {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to top, #3b82f6 0, #22d3ee var(--v), var(--surface-3) var(--v));
+}
+
+.dtop {
+  margin: 4px 0 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.dtop div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.dtop span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dtemp {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dtemp b {
+  font: 700 24px var(--font-display);
+}
+
+.dz {
+  font: 700 10px var(--font);
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dz.z-ok {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+}
+
+.dz.z-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+}
+
+.dz.z-crit {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.thermo {
+  position: relative;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  margin: 2px 0 2px;
+}
+
+.thermo .tz {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--a);
+  right: calc(100% - var(--b));
+  opacity: 0.85;
+}
+
+.thermo .tz:first-child {
+  border-radius: 99px 0 0 99px;
+}
+
+.thermo .tz:nth-child(3) {
+  border-radius: 0 99px 99px 0;
+}
+
+.thermo .tnow {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  border-radius: 3px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--popup-bg);
+  transition: left 0.6s var(--ease);
+}
+
+.thermo .tmm {
+  position: absolute;
+  top: 9px;
+  width: 2px;
+  height: 5px;
+  margin-left: -1px;
+  background: var(--text-3);
+}
+
+.tscale {
+  position: relative;
+  height: 16px;
+  font-size: 10px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.tscale span {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+}
+
+.tscale span:first-child {
+  transform: none;
+}
+
+.tscale span.r {
+  right: 0;
+  transform: none;
+}
+
+.ddrive {
+  margin-top: 4px;
+}
+
+.dnote {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-2);
 }
 
 /* Ventana completa */

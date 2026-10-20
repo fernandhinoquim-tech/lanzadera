@@ -86,7 +86,15 @@ const mockScript = (state) => `
           net: { rx: w(2e4, 3.2e6, 2.5), tx: w(5e3, 4e5, 3) }, netTotals: { rx: 1.8e9, tx: 2.3e8 }, disk: { r: w(0, 4e7, 2), w: w(0, 1.5e7, 3.5), busy: Math.round(w(1, 22, 3)) },
           mhz: 3480, temps: [62], battery: { pct: 78, ac: false, secs: 11800 }, uptime: 93000, host: 'PC-FERNANDO',
           drives: [{ name: 'C:', label: 'Windows', total: 512e9, free: 201e9 }, { name: 'D:', label: 'Datos', total: 1e12, free: 80e9 }],
-          procs: { count: 241, cpu: [['chrome', 12.4, 1.9e9], ['Code', 6.1, 8e8], ['explorer', 2.2, 1.6e8], ['Spotify', 1.8, 3.1e8], ['Teams', 1.1, 6.4e8], ['Lanzadera', 0.6, 1.4e8]], mem: [] } };
+          procs: { count: 241, cpu: [['chrome', 12.4, 1.9e9], ['Code', 6.1, 8e8], ['explorer', 2.2, 1.6e8], ['Spotify', 1.8, 3.1e8], ['Teams', 1.1, 6.4e8], ['Lanzadera', 0.6, 1.4e8]], mem: [['chrome', 12.4, 1.9e9], ['Teams', 1.1, 6.4e8], ['Code', 6.1, 8e8]] } };
+        const zone = (v, c, k) => (v >= k ? 'crit' : v >= c ? 'warn' : 'ok');
+        const sens = (key, label, value, caution, critical, source, limits) => ({ key, label, value, caution, critical, source, limits, zone: zone(value, caution, critical), max: Math.ceil((critical + 15) / 10) * 10 });
+        now.sensors = [
+          sens('cpu', 'Procesador', Math.round(w(58, 66, 5)), 80, 95, 'Sensor térmico de la placa (ACPI)', 'habituales'),
+          sens('gpu', 'Gráfica', Math.round(w(82, 88, 4)), 83, 93, 'NVIDIA GeForce RTX 3060 Laptop GPU', 'de la tarjeta'),
+          sens('disk0', 'SSD', Math.round(w(44, 47, 9)), 72, 82, 'Samsung SSD 980 PRO 1TB', 'del fabricante'),
+        ];
+        now.gpu.temp = now.sensors[1].value;
         for (const [kk, v] of [['cpu', now.cpu], ['mem', now.mem], ['gpu', now.gpu.util], ['rx', now.net.rx], ['tx', now.net.tx], ['dr', now.disk.r], ['dw', now.disk.w]]) { hist[kk].push(v); if (hist[kk].length > 90) hist[kk].shift(); }
         window.__mlast = { now, hist };
         emit('metrics', window.__mlast);
@@ -178,9 +186,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         await page.close();
       } else if (kind === 'monitor') {
         const opts = arg ? JSON.parse(arg) : {};
-        const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 320, h: opts.h || 700, dark: opts.dark !== false, patch: opts.patch || {} });
+        const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 350, h: opts.h || 760, dark: opts.dark !== false, patch: opts.patch || {} });
         await page.evaluate(() => window.lanz.metricsSubscribe(true));
         await wait(1500);
+        if (opts.hover) {
+          await page.hover(opts.hover);
+          await wait(900);
+        }
         await page.screenshot({ path: path.join(out, (opts.name || 'monitor') + '.png'), omitBackground: true });
         await page.close();
       } else if (kind === 'search') {

@@ -1,5 +1,5 @@
 // Lanzadera — proceso principal.
-const { app, BrowserWindow, Menu, nativeTheme, screen, globalShortcut, systemPreferences } = require('electron');
+const { app, BrowserWindow, Menu, Notification, nativeTheme, screen, globalShortcut, systemPreferences } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -216,7 +216,12 @@ async function init() {
   ctx.docks = new DockManager(ctx.store, ctx.shell);
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
-  ctx.metrics = new Metrics();
+  ctx.metrics = new Metrics({ config: () => ctx.store.get().monitor });
+  ctx.metrics.on('alert', (s) => {
+    try {
+      if (Notification.isSupported()) new Notification({ title: `Temperatura crítica: ${s.label}`, body: `Llegó a ${s.value} °C (crítico desde ${s.critical} °C). Revisa la ventilación o cierra programas pesados.`, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') }).show();
+    } catch {}
+  });
   ctx.monitor = new MonitorWindows(ctx.store);
   ctx.state = state;
   ctx.broadcast = broadcast;

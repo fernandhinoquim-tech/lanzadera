@@ -315,11 +315,146 @@ public static class LzMet {
     return "{\"mhz\":" + N(freq > 0 && perf > 0 ? freq * perf / 100 : freq) + ",\"base\":" + N(freq) + "}";
   }
 
+  // Sensores térmicos ACPI de la placa. Muchos equipos de escritorio informan un valor fijo
+  // de 301 K (27,85 °C) que no es real: se descarta.
   static string Temps() {
     List<string> l = new List<string>();
     foreach (KeyValuePair<string, double> kv in Read(thermal, "Temperature", false)) {
+      if (Math.Abs(kv.Value - 301) < 0.01) continue;
       double c = kv.Value - 273.15;
       if (c > 5 && c < 125) l.Add(N(c));
+    }
+    return "[" + string.Join(",", l.ToArray()) + "]";
+  }
+
+  // Temperatura de la tarjeta gráfica (cualquier marca), como la muestra el Administrador de
+  // tareas: D3DKMT_ADAPTER_PERFDATA, con los límites de la propia tarjeta (PERFDATACAPS).
+  [StructLayout(LayoutKind.Sequential)] struct KMT_ADAPTERINFO { public uint hAdapter; public uint LuidLow; public int LuidHigh; public uint NumOfSources; public int Precise; }
+  [StructLayout(LayoutKind.Sequential)] struct KMT_ENUMADAPTERS2 { public uint NumAdapters; public IntPtr pAdapters; }
+  [StructLayout(LayoutKind.Sequential)] struct KMT_QUERYADAPTERINFO { public uint hAdapter; public int Type; public IntPtr pData; public uint DataSize; }
+  [DllImport("gdi32.dll")] static extern int D3DKMTEnumAdapters2(ref KMT_ENUMADAPTERS2 e);
+  [DllImport("gdi32.dll")] static extern int D3DKMTQueryAdapterInfo(ref KMT_QUERYADAPTERINFO q);
+
+  static List<uint> adapters = null;
+  static Dictionary<uint, byte[]> gpuCaps = new Dictionary<uint, byte[]>();
+
+  static void InitGpuPerf() {
+    adapters = new List<uint>();
+    try {
+      KMT_ENUMADAPTERS2 e = new KMT_ENUMADAPTERS2();
+      if (D3DKMTEnumAdapters2(ref e) != 0 || e.NumAdapters == 0 || e.NumAdapters > 32) return;
+      int sz = Marshal.SizeOf(typeof(KMT_ADAPTERINFO));
+      e.pAdapters = Marshal.AllocHGlobal(sz * (int)e.NumAdapters);
+      try {
+        if (D3DKMTEnumAdapters2(ref e) != 0) return;
+        for (int i = 0; i < e.NumAdapters; i++) {
+          KMT_ADAPTERINFO a = (KMT_ADAPTERINFO)Marshal.PtrToStructure(IntPtr.Add(e.pAdapters, i * sz), typeof(KMT_ADAPTERINFO));
+          adapters.Add(a.hAdapter);
+        }
+      } finally { Marshal.FreeHGlobal(e.pAdapters); }
+    } catch { }
+  }
+
+  static byte[] AdapterInfo(uint h, int type, int size) {
+    IntPtr buf = Marshal.AllocHGlobal(size);
+    try {
+      for (int i = 0; i < size; i++) Marshal.WriteByte(buf, i, 0);
+      KMT_QUERYADAPTERINFO q = new KMT_QUERYADAPTERINFO();
+      q.hAdapter = h;
+      q.Type = type;
+      q.pData = buf;
+      q.DataSize = (uint)size;
+      if (D3DKMTQueryAdapterInfo(ref q) != 0) return null;
+      byte[] r = new byte[size];
+      Marshal.Copy(buf, r, 0, size);
+      return r;
+    } catch { return null; }
+    finally { Marshal.FreeHGlobal(buf); }
+  }
+
+  static string GpuPerf() {
+    if (adapters == null) InitGpuPerf();
+    string best = "null";
+    double bestT = 0;
+    foreach (uint h in adapters) {
+      byte[] p = AdapterInfo(h, 62, 64);
+      if (p == null) continue;
+      double t = BitConverter.ToUInt32(p, 56) / 10.0;
+      if (t <= 0 || t > 150 || t <= bestT) continue;
+      byte[] c;
+      if (!gpuCaps.TryGetValue(h, out c)) { c = AdapterInfo(h, 63, 40); gpuCaps[h] = c; }
+      double max = c != null ? BitConverter.ToUInt32(c, 28) / 10.0 : 0;
+      double warn = c != null ? BitConverter.ToUInt32(c, 32) / 10.0 : 0;
+      bestT = t;
+      best = "{\"t\":" + N(t) + ",\"fan\":" + BitConverter.ToUInt32(p, 48) + ",\"power\":" + N(BitConverter.ToUInt32(p, 52) / 10.0) + ",\"warn\":" + N(warn) + ",\"max\":" + N(max) + "}";
+    }
+    return best;
+  }
+
+  // Temperatura de discos SSD y NVMe (StorageDeviceTemperatureProperty), con los límites que
+  // informa el fabricante. Los discos mecánicos no se consultan para no despertarlos.
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr CreateFile(string name, uint access, uint share, IntPtr sec, uint disp, uint flags, IntPtr tmpl);
+  [DllImport("kernel32.dll", SetLastError = true)] static extern bool DeviceIoControl(IntPtr h, uint code, byte[] inBuf, int inSize, byte[] outBuf, int outSize, out int returned, IntPtr ov);
+  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+
+  class SsdInfo { public string Path; public string Name; }
+  static List<SsdInfo> ssds = null;
+
+  static IntPtr OpenDrive(string path) {
+    IntPtr h = CreateFile(path, 0, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
+    return h.ToInt64() == -1 ? IntPtr.Zero : h;
+  }
+
+  static byte[] StorageQuery(IntPtr h, int prop, int outSize) {
+    byte[] q = new byte[12];
+    BitConverter.GetBytes(prop).CopyTo(q, 0);
+    byte[] o = new byte[outSize];
+    int n;
+    if (!DeviceIoControl(h, 0x2D1400, q, q.Length, o, o.Length, out n, IntPtr.Zero) || n < 8) return null;
+    return o;
+  }
+
+  static void InitDisks() {
+    ssds = new List<SsdInfo>();
+    for (int i = 0; i < 16; i++) {
+      string path = "\\\\.\\PhysicalDrive" + i;
+      IntPtr h = OpenDrive(path);
+      if (h == IntPtr.Zero) continue;
+      try {
+        byte[] sp = StorageQuery(h, 7, 12);
+        if (sp == null || sp[8] != 0) continue;
+        string name = "Disco " + (i + 1);
+        byte[] dd = StorageQuery(h, 0, 1024);
+        if (dd != null) {
+          int off = BitConverter.ToInt32(dd, 16);
+          if (off > 0 && off < dd.Length) {
+            int e = off;
+            while (e < dd.Length && dd[e] != 0) e++;
+            string m = Encoding.ASCII.GetString(dd, off, e - off).Trim();
+            if (m.Length > 0) name = m;
+          }
+        }
+        SsdInfo info = new SsdInfo();
+        info.Path = path;
+        info.Name = name;
+        ssds.Add(info);
+      } catch { } finally { CloseHandle(h); }
+    }
+  }
+
+  static string DiskTemps() {
+    if (ssds == null) InitDisks();
+    List<string> l = new List<string>();
+    foreach (SsdInfo d in ssds) {
+      IntPtr h = OpenDrive(d.Path);
+      if (h == IntPtr.Zero) continue;
+      try {
+        byte[] t = StorageQuery(h, 52, 512);
+        if (t == null || BitConverter.ToUInt16(t, 12) < 1) continue;
+        short temp = BitConverter.ToInt16(t, 26);
+        if (temp <= 0 || temp > 120) continue;
+        l.Add("{\"name\":" + J(d.Name) + ",\"t\":" + temp + ",\"warn\":" + BitConverter.ToInt16(t, 10) + ",\"crit\":" + BitConverter.ToInt16(t, 8) + "}");
+      } catch { } finally { CloseHandle(h); }
     }
     return "[" + string.Join(",", l.ToArray()) + "]";
   }
@@ -380,12 +515,14 @@ public static class LzMet {
     StreamWriter w = new StreamWriter(outStream, new UTF8Encoding(false));
     w.AutoFlush = true;
     int n = 0;
-    string drives = "[]", procs = "null";
+    string drives = "[]", procs = "null", dtemps = "[]", gperf = "null";
     while (true) {
       if (n % 30 == 0) drives = Drives();
       if (n % 2 == 0) procs = Procs();
+      if (n % 10 == 0) { try { dtemps = DiskTemps(); } catch { dtemps = "[]"; } }
+      if (n % 2 == 0) { try { gperf = GpuPerf(); } catch { gperf = "null"; } }
       string line = "{\"gpu\":" + Gpu() + ",\"net\":" + Net() + ",\"disk\":" + Disk() + ",\"cpu\":" + Cpu() + ",\"temps\":" + Temps() +
-        ",\"battery\":" + Battery() + ",\"drives\":" + drives + ",\"procs\":" + procs + "}";
+        ",\"battery\":" + Battery() + ",\"drives\":" + drives + ",\"procs\":" + procs + ",\"gperf\":" + gperf + ",\"dtemps\":" + dtemps + "}";
       if (n > 0) w.WriteLine(line);
       n++;
       Thread.Sleep(1000);

@@ -451,7 +451,7 @@ class MonitorWindows {
   createGadget() {
     const m = this.store.get().monitor;
     const area = screen.getPrimaryDisplay().workArea;
-    const w = 300;
+    const w = 330;
     let b = m.bounds;
     const visible = b && screen.getAllDisplays().some((d) => b.x >= d.workArea.x - 50 && b.x < d.workArea.x + d.workArea.width - 50 && b.y >= d.workArea.y - 20 && b.y < d.workArea.y + d.workArea.height - 50);
     if (!visible) b = { x: area.x + area.width - w - 24, y: area.y + 24 };

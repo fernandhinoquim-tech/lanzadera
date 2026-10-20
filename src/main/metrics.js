@@ -9,6 +9,50 @@ const { isWin, helperPath } = require('./winhelper');
 
 const HISTORY = 90;
 const SERIES = ['cpu', 'mem', 'gpu', 'rx', 'tx', 'dr', 'dw'];
+const ALERT_COOLDOWN = 10 * 60 * 1000;
+
+function zoneOf(v, caution, critical) {
+  return v >= critical ? 'crit' : v >= caution ? 'warn' : 'ok';
+}
+
+// Sensores de temperatura con sus zonas: amarillo (cuidado) y rojo (crítico). Se usan los
+// límites que informa cada componente cuando existen; si no, valores habituales.
+function buildSensors({ temps, gpuTemp, gpuName, disks }) {
+  const list = [];
+  if (temps?.length) {
+    list.push({ key: 'cpu', label: 'Procesador', value: Math.max(...temps), caution: 80, critical: 95, source: 'Sensor térmico de la placa (ACPI)', limits: 'habituales' });
+  }
+  if (gpuTemp) {
+    const own = gpuTemp.warn >= 60 && gpuTemp.warn <= 120;
+    const crit = own ? Math.round(gpuTemp.warn) : 90;
+    list.push({ key: 'gpu', label: 'Gráfica', value: gpuTemp.value, caution: crit - 10, critical: crit, source: gpuName || 'Tarjeta gráfica', limits: own ? 'de la tarjeta' : 'habituales' });
+  }
+  const many = (disks || []).length > 1;
+  (disks || []).forEach((d, i) => {
+    const own = d.warn >= 40 && d.warn <= 110;
+    const crit = own ? d.warn : 70;
+    list.push({ key: 'disk' + i, label: many ? `SSD ${i + 1}` : 'SSD', value: d.t, caution: crit - 10, critical: crit, source: d.name || 'Unidad SSD', limits: own ? 'del fabricante' : 'habituales', makerCritical: d.crit > 0 ? d.crit : null });
+  });
+  for (const s of list) {
+    s.value = Math.round(s.value);
+    s.zone = zoneOf(s.value, s.caution, s.critical);
+    s.max = Math.ceil((s.critical + 15) / 10) * 10;
+  }
+  return list;
+}
+
+// Respaldo para Linux (desarrollo): sensores de /sys/class/thermal.
+function linuxTemps() {
+  const out = [];
+  try {
+    for (const z of fs.readdirSync('/sys/class/thermal')) {
+      if (!z.startsWith('thermal_zone')) continue;
+      const v = Number(fs.readFileSync(`/sys/class/thermal/${z}/temp`, 'utf8')) / 1000;
+      if (v > 5 && v < 125) out.push(v);
+    }
+  } catch {}
+  return out;
+}
 
 function cpuSnapshot() {
   return os.cpus().map((c) => {
@@ -41,8 +85,12 @@ function procTotals() {
 }
 
 class Metrics extends EventEmitter {
-  constructor() {
+  // config: devuelve la configuración del monitor (para saber si avisar temperaturas críticas).
+  constructor({ config = () => ({}) } = {}) {
     super();
+    this.config = config;
+    this.critCount = {};
+    this.lastAlert = {};
     this.subs = new Map();
     this.timer = null;
     this.child = null;
@@ -153,6 +201,8 @@ class Metrics extends EventEmitter {
     let disk = null;
     let gpu = null;
     let extra = {};
+    let gpuTemp = null;
+    let diskTemps = [];
     if (isWin) {
       const w = this.win && Date.now() - this.winAt < 5000 ? this.win : null;
       if (w) {
@@ -160,12 +210,19 @@ class Metrics extends EventEmitter {
         disk = w.disk;
         gpu = w.gpu;
         extra = { mhz: w.cpu?.mhz || null, baseMhz: w.cpu?.base || null, temps: w.temps || [], battery: w.battery, drives: w.drives || [], procs: w.procs };
+        diskTemps = Array.isArray(w.dtemps) ? w.dtemps : [];
+        if (w.gperf?.t > 0) {
+          gpuTemp = { value: w.gperf.t, warn: w.gperf.warn };
+          gpu = { ...(gpu || {}), temp: Math.round(w.gperf.t), fanRpm: w.gperf.fan || null };
+        }
       }
       this.pollNvidia();
       if (this.nvidia && typeof this.nvidia === 'object') {
-        gpu = { ...(gpu || {}), name: this.nvidia.name || gpu?.name, util: this.nvidia.util ?? gpu?.util, mem: this.nvidia.mem || gpu?.mem, memTotal: this.nvidia.memTotal || gpu?.memTotal, temp: this.nvidia.temp, fan: this.nvidia.fan, power: this.nvidia.power };
+        gpu = { ...(gpu || {}), name: this.nvidia.name || gpu?.name, util: this.nvidia.util ?? gpu?.util, mem: this.nvidia.mem || gpu?.mem, memTotal: this.nvidia.memTotal || gpu?.memTotal, temp: this.nvidia.temp ?? gpu?.temp, fan: this.nvidia.fan, power: this.nvidia.power };
+        if (this.nvidia.temp != null) gpuTemp = { value: this.nvidia.temp, warn: gpuTemp?.warn };
       }
     } else {
+      extra = { temps: linuxTemps() };
       const t = procTotals();
       if (this.prevProc) {
         net = { rx: Math.max(0, t.rx - this.prevProc.rx), tx: Math.max(0, t.tx - this.prevProc.tx) };
@@ -194,6 +251,8 @@ class Metrics extends EventEmitter {
       host: os.hostname(),
       ...extra,
     };
+    sample.sensors = buildSensors({ temps: sample.temps, gpuTemp, gpuName: gpu?.name, disks: diskTemps });
+    this.checkAlerts(sample.sensors);
     const push = (k, v) => {
       const a = this.hist[k];
       a.push(v ?? 0);
@@ -212,9 +271,21 @@ class Metrics extends EventEmitter {
     this.emit('sample', payload);
   }
 
+  // Aviso si una temperatura se mantiene en zona crítica (3 muestras seguidas).
+  checkAlerts(sensors) {
+    const now = Date.now();
+    for (const s of sensors) {
+      this.critCount[s.key] = s.zone === 'crit' ? (this.critCount[s.key] || 0) + 1 : 0;
+      if (this.critCount[s.key] !== 3 || this.config().alerts === false) continue;
+      if (now - (this.lastAlert[s.key] || 0) < ALERT_COOLDOWN) continue;
+      this.lastAlert[s.key] = now;
+      this.emit('alert', s);
+    }
+  }
+
   snapshot() {
     return this.latest ? { now: this.latest, hist: this.hist } : null;
   }
 }
 
-module.exports = { Metrics };
+module.exports = { Metrics, buildSensors, zoneOf };

@@ -1,10 +1,9 @@
 ## Novedades
 
-- **No tapa tus ventanas.** El dock reserva su franja como la barra de tareas: lo que maximices termina justo arriba. Si prefieres, puede esconderse cuando una ventana lo toca, o quedar encima como antes (clic derecho › Con ventanas abiertas).
-- **Métricas en el escritorio.** El monitor de rendimiento ahora es un panel del escritorio que puedes mover a donde quieras; la barra queda libre.
-- **Barra en dos zonas.** Primero tus programas más usados (según el uso real en Windows) y después tus grupos.
-- **Agrupa a tu manera.** Suelta un icono sobre otro y mantenlo un momento para crear un grupo, o usa clic derecho › Agrupar. También puedes armar grupos por tema con los accesos directos de tu escritorio (Configuración › Accesos y grupos).
-- **Programas abiertos.** Un punto marca lo que está abierto y un clic te lleva a su ventana. Mayús + clic abre otra.
+- **Monitor de rendimiento renovado.** Medidores circulares para el procesador, la memoria y la gráfica, y gráficas de red y disco, con un diseño más moderno.
+- **Temperaturas con zonas de color.** Medidores para el procesador, la tarjeta gráfica y los discos SSD: verde es normal, amarillo es cuidado y rojo es crítico. Los límites se toman de la propia tarjeta o del fabricante del disco cuando los informan.
+- **Más información al pasar el puntero.** Cada medidor despliega su detalle: historial, programas que más consumen, memoria de video, mínima y máxima de la sesión, límites y consejos.
+- **Aviso de temperatura crítica.** Si algo se mantiene en rojo, Windows te muestra una notificación (se puede apagar en Configuración › Widgets).
 
 ## Cómo instalar
 
@@ -20,7 +19,7 @@ Las próximas versiones se instalan **solas**: Lanzadera las descarga y te avisa
 - **Grupos** que se abren en abanico, cuadrícula o lista, y «Abrir todo» para lanzar el grupo completo.
 - **Iconos 3D** al estilo de Windows 11 (1.238 iconos Fluent) con buscador en español, más un banco de 1.850 iconos de línea con 7 estilos, o **tus propias imágenes**.
 - **Iconos originales en HD**: los de tus programas se extraen de Windows a 256 px.
-- **Monitor de rendimiento**: CPU, memoria, gráfica, red, disco, temperaturas, unidades, batería y programas que más consumen, en el dock, en un panel completo o como **monitor flotante** en el escritorio.
+- **Monitor de rendimiento** en el escritorio: CPU, memoria, gráfica, red, disco, temperaturas con zonas de cuidado y crítico, unidades, batería y programas que más consumen.
 - **Buscador rápido** (`Alt + Espacio`): apps, archivos, ajustes de Windows y cuentas (`80*15%`).
 - **Espacios de trabajo** (`Ctrl + Mayús + Alt + 1…9`), **carpetas en vivo**, **recientes**, **estante**, **ordenar escritorio** (con deshacer), portapapeles, notas, calendario y copia de seguridad.
 - Se oculta sola cuando juegas o ves un video en pantalla completa.

@@ -79,3 +79,15 @@ test('gráficas del monitor', () => {
   assert.equal(fmtRateShort(1536), '2K');
   assert.equal(fmtRateShort(2.5 * 1048576), '2,5M');
 });
+
+test('el medidor de temperatura pinta las tres zonas y colorea según el valor', async () => {
+  const { gaugeSVG } = await import('../src/renderer/shared/charts.js');
+  const zones = { caution: 80, critical: 95 };
+  const warm = gaugeSVG({ value: 86, min: 20, max: 110, zones, unit: '°', status: 'Cuidado' });
+  assert.match(warm, /class="gauge z-warn"/);
+  assert.equal((warm.match(/stroke-width="3"/g) || []).length, 3, 'banda verde, amarilla y roja');
+  assert.match(warm, />86</);
+  assert.match(gaugeSVG({ value: 97, min: 20, max: 110, zones }), /z-crit/);
+  assert.match(gaugeSVG({ value: 40, min: 20, max: 110, zones }), /z-ok/);
+  assert.doesNotMatch(gaugeSVG({ value: NaN, zones }), /<circle/, 'sin dato no hay marcador');
+});

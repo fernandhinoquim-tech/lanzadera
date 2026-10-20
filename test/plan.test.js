@@ -164,3 +164,33 @@ test('el área del dock suma la franja que él mismo reservó', () => {
   assert.ok(intersects({ x: 0, y: 0, width: 100, height: 100 }, { x: 90, y: 90, width: 50, height: 50 }));
   assert.ok(!intersects({ x: 0, y: 0, width: 100, height: 100 }, { x: 95, y: 95, width: 50, height: 50 }, 8), 'los bordes invisibles no cuentan');
 });
+
+test('las temperaturas usan los límites del componente y marcan la zona', () => {
+  const { buildSensors } = require('../src/main/metrics');
+  const s = buildSensors({ temps: [61.4, 40], gpuTemp: { value: 88.6, warn: 93 }, gpuName: 'RTX', disks: [{ name: 'SSD X', t: 83, warn: 82, crit: 85 }, { name: 'SSD Y', t: 40, warn: 0, crit: 0 }] });
+  assert.deepEqual(s.map((x) => [x.key, x.label, x.value, x.caution, x.critical, x.zone]), [
+    ['cpu', 'Procesador', 61, 80, 95, 'ok'],
+    ['gpu', 'Gráfica', 89, 83, 93, 'warn'],
+    ['disk0', 'SSD 1', 83, 72, 82, 'crit'],
+    ['disk1', 'SSD 2', 40, 60, 70, 'ok'],
+  ]);
+  assert.equal(s[1].limits, 'de la tarjeta');
+  assert.equal(s[3].limits, 'habituales');
+  assert.ok(s.every((x) => x.max >= x.critical + 10));
+});
+
+test('avisa una sola vez cuando una temperatura se queda en zona crítica', () => {
+  const { Metrics } = require('../src/main/metrics');
+  const m = new Metrics({ config: () => ({ alerts: true }) });
+  const alerts = [];
+  m.on('alert', (s) => alerts.push(s.key));
+  const hot = [{ key: 'gpu', zone: 'crit' }];
+  for (let i = 0; i < 6; i++) m.checkAlerts(hot);
+  m.checkAlerts([{ key: 'gpu', zone: 'ok' }]);
+  for (let i = 0; i < 3; i++) m.checkAlerts(hot);
+  assert.deepEqual(alerts, ['gpu'], 'el segundo episodio cae dentro de la espera de 10 minutos');
+  const off = new Metrics({ config: () => ({ alerts: false }) });
+  off.on('alert', () => alerts.push('x'));
+  for (let i = 0; i < 4; i++) off.checkAlerts(hot);
+  assert.deepEqual(alerts, ['gpu']);
+});

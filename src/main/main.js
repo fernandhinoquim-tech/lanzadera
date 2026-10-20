@@ -211,7 +211,7 @@ async function init() {
   ctx.updater = new Updater();
   ctx.searchIndex = new SearchIndex({ store: ctx.store, apps: ctx.apps, paths: ctx.paths });
   ctx.backup = createBackup({ store: ctx.store, customDir: ctx.customDir });
-  ctx.shell = new ShellBridge();
+  ctx.shell = new ShellBridge({ stateFile: path.join(dir, 'appbars.json') });
   ctx.running = new RunningTracker(ctx.store, ctx.shell);
   ctx.docks = new DockManager(ctx.store, ctx.shell);
   ctx.panel = new PanelWindow();

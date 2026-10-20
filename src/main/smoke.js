@@ -373,6 +373,30 @@ async function run(ctx) {
       if (after.height !== before.height) throw new Error('La franja quedó reservada al cerrar el ayudante: ' + JSON.stringify({ before, reserved, after }));
       return { before, reserved, after, stopMs };
     });
+    // Cierre brusco: el ayudante muere sin soltar la franja; al volver a abrir, se suelta.
+    await step('recuperar-cierre-brusco', async () => {
+      const { ShellBridge } = require('./shell');
+      ctx.store.patch({ position: { windows: 'top' } });
+      ctx.shell.start();
+      await wait(5000);
+      const before = screen.getPrimaryDisplay().workArea;
+      ctx.store.patch({ position: { windows: 'reserve' } });
+      await wait(3000);
+      const reserved = screen.getPrimaryDisplay().workArea;
+      ctx.shell.stopped = true;
+      ctx.shell.child?.kill();
+      await wait(2500);
+      const afterKill = screen.getPrimaryDisplay().workArea;
+      const fresh = new ShellBridge({ stateFile: ctx.shell.stateFile });
+      fresh.start();
+      await wait(6000);
+      const recovered = screen.getPrimaryDisplay().workArea;
+      await fresh.stop();
+      const info = { before, reserved, afterKill, recovered, file: ctx.shell.stateFile };
+      if (reserved.height >= before.height) throw new Error('No se reservó la franja: ' + JSON.stringify(info));
+      if (recovered.height !== before.height) throw new Error('No se recuperó el espacio tras el cierre brusco: ' + JSON.stringify(info));
+      return info;
+    });
     await step('miniatura', async () => {
       const t = await ctx.icons.thumbnail(txt, 128);
       return { ok: !!t };

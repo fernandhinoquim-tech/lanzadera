@@ -2,6 +2,7 @@
 // programas abiertos, reserva del espacio del dock (AppBar) y traer ventanas al frente.
 const { screen } = require('electron');
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 const { isWin, helperPath } = require('./winhelper');
@@ -28,8 +29,12 @@ function toDip(r) {
 }
 
 class ShellBridge extends EventEmitter {
-  constructor() {
+  // stateFile guarda qué ventanas reservaron una franja: si Lanzadera se cierra de golpe,
+  // al volver a abrir se le pide a Windows que suelte esas franjas viejas.
+  constructor({ stateFile = null } = {}) {
     super();
+    this.stateFile = stateFile;
+    this.bars = new Set();
     this.child = null;
     this.restarts = 0;
     this.fullscreenDisplay = null;
@@ -49,9 +54,7 @@ class ShellBridge extends EventEmitter {
     this.stopped = false;
     const exe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
     try {
-      // Independiente de Lanzadera: si esta se cierra de golpe, el ayudante igual devuelve la
-      // franja reservada antes de terminar (Windows mataría a un hijo normal junto con ella).
-      this.child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helperPath(), '-Mode', 'shell', '-ParentPid', String(process.pid)], { windowsHide: true, detached: true });
+      this.child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helperPath(), '-Mode', 'shell', '-ParentPid', String(process.pid)], { windowsHide: true });
     } catch {
       this.child = null;
       return;
@@ -90,6 +93,7 @@ class ShellBridge extends EventEmitter {
     if (kind === 'hello') {
       const [appbar, taskbarCreated] = rest.split(' ').map(Number);
       this.msgIds = { appbar, taskbarCreated };
+      this.releaseStale();
       this.emit('ready', this.msgIds);
     } else if (kind === 'fg') {
       let fg;
@@ -139,12 +143,38 @@ class ShellBridge extends EventEmitter {
     } catch {}
     const px = Math.max(1, Math.round(thickness * (display.scaleFactor || 1)));
     this.send(`${force ? 'rebar' : 'bar'} ${hwnd} ${EDGES[edge] ?? 3} ${px} ${mon.x} ${mon.y} ${mon.x + mon.width} ${mon.y + mon.height}`);
+    this.trackBar(hwnd, true);
     return true;
   }
 
   removeAppBar(win) {
     const hwnd = hwndOf(win);
-    if (hwnd) this.send(`unbar ${hwnd}`);
+    if (!hwnd) return;
+    this.send(`unbar ${hwnd}`);
+    this.trackBar(hwnd, false);
+  }
+
+  trackBar(hwnd, on) {
+    if (on === this.bars.has(hwnd)) return;
+    if (on) this.bars.add(hwnd);
+    else this.bars.delete(hwnd);
+    if (!this.stateFile) return;
+    try {
+      fs.writeFileSync(this.stateFile, JSON.stringify([...this.bars]));
+    } catch {}
+  }
+
+  // Franjas que quedaron reservadas por un cierre inesperado de la vez anterior.
+  releaseStale() {
+    if (!this.stateFile) return;
+    let old = [];
+    try {
+      old = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
+    } catch {}
+    for (const h of Array.isArray(old) ? old : []) if (/^\d+$/.test(String(h)) && !this.bars.has(String(h))) this.send(`unbar ${h}`);
+    try {
+      fs.writeFileSync(this.stateFile, JSON.stringify([...this.bars]));
+    } catch {}
   }
 
   focus(hwnd) {

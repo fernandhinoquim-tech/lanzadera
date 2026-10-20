@@ -498,6 +498,7 @@ public static class LzShell {
 
   static readonly object outLock = new object();
   static readonly Queue<string> cmds = new Queue<string>();
+  static readonly AutoResetEvent wake = new AutoResetEvent(false);
   static readonly Dictionary<long, WinInfo> infos = new Dictionary<long, WinInfo>();
   static readonly Dictionary<long, uint> bars = new Dictionary<long, uint>();
   static uint cbMsg = 0;
@@ -532,9 +533,13 @@ public static class LzShell {
   static void ReadLoop() {
     try {
       string line;
-      while ((line = Console.In.ReadLine()) != null) lock (cmds) cmds.Enqueue(line.Trim());
+      while ((line = Console.In.ReadLine()) != null) {
+        lock (cmds) cmds.Enqueue(line.Trim());
+        wake.Set();
+      }
     } catch { }
     lock (cmds) cmds.Enqueue("quit");
+    wake.Set();
   }
 
   static string Next() {
@@ -742,7 +747,7 @@ public static class LzShell {
           try { Process.GetProcessById(parentPid).Dispose(); } catch { return; }
         }
         n++;
-        Thread.Sleep(250);
+        wake.WaitOne(250);
       }
     } finally {
       foreach (long k in new List<long>(bars.Keys)) Unbar(new IntPtr(k));

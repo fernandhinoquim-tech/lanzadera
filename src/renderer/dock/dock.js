@@ -674,7 +674,11 @@ function moveDrag(e) {
   const away = S.edge === 'bottom' ? r.top - p.y : S.edge === 'top' ? p.y - r.bottom : S.edge === 'left' ? p.x - r.right : r.left - p.x;
   drag.poof = away > S0 * 1.4;
   ghost.classList.toggle('poof', drag.poof);
-  if (drag.poof) return setGroupTarget(null);
+  if (drag.poof) {
+    drag.mergeWith = null;
+    clearTimeout(drag.mergeTimer);
+    return setGroupTarget(null);
+  }
 
   // ¿Encima del centro de un grupo? → soltar dentro. ¿Del centro de otro programa? → si se
   // mantiene un momento, se arma un grupo nuevo con los dos.

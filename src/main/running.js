@@ -93,13 +93,13 @@ class RunningTracker extends EventEmitter {
     this.emit('change', list);
   }
 
-  // Clic en un programa abierto: lo trae al frente; si ya estaba al frente, lo minimiza
-  // (o pasa a su siguiente ventana si tiene varias).
-  activate(item) {
+  // Clic en un programa abierto: lo trae al frente. Desde el dock (toggle), si ya estaba al
+  // frente, lo minimiza o pasa a su siguiente ventana si tiene varias.
+  activate(item, { toggle = false } = {}) {
     const wins = this.windowsFor(item);
     if (!wins.length) return false;
     const active = String(this.bridge.lastExternal?.h ?? '');
-    const idx = wins.findIndex((w) => String(w.h) === active && !w.m);
+    const idx = toggle ? wins.findIndex((w) => String(w.h) === active && !w.m) : -1;
     if (idx < 0) this.bridge.focus(wins[0].h);
     else if (wins.length > 1) this.bridge.focus(wins[(idx + 1) % wins.length].h);
     else this.bridge.minimize(wins[idx].h);

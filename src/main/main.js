@@ -161,7 +161,18 @@ function quit() {
   app.quit();
 }
 
+// Antes de salir se devuelve a Windows la franja reservada por el dock; si no, las ventanas
+// maximizadas seguirían terminando antes del borde.
+let released = false;
+async function releaseShell() {
+  if (released) return;
+  released = true;
+  ctx.docks?.releaseAll();
+  await ctx.shell?.stop();
+}
+
 async function resetAll() {
+  await releaseShell();
   const dir = app.getPath('userData');
   ctx.store.writer.flush();
   for (const f of ['config.json', 'config.json.bak', 'stats.json', 'clipboard.json', 'apps-cache.json']) fs.rmSync(path.join(dir, f), { force: true });
@@ -288,8 +299,11 @@ async function init() {
   const version = app.getVersion();
   if (!process.env.LANZADERA_SMOKE) {
     if (cfg.firstRun) ctx.panel.open('/bienvenida');
-    else if (cfg.seenVersion !== version && NEWS_VERSION.localeCompare(cfg.seenVersion || '0', undefined, { numeric: true }) > 0) ctx.panel.open('/novedades');
-    else if (cfg.seenVersion !== version) ctx.store.patch({ seenVersion: version });
+    else if (cfg.seenVersion !== version) {
+      const news = NEWS_VERSION.localeCompare(cfg.seenVersion || '0', undefined, { numeric: true }) > 0;
+      ctx.store.patch({ seenVersion: version });
+      if (news) ctx.panel.open('/novedades');
+    }
   }
   if (process.env.LANZADERA_SMOKE) require('./smoke').run(ctx);
 }
@@ -297,10 +311,14 @@ async function init() {
 app.on('window-all-closed', () => {
   // Lanzadera sigue activa en la bandeja aunque se cierren las ventanas.
 });
-app.on('before-quit', flushAll);
+app.on('before-quit', (e) => {
+  flushAll();
+  if (released || !ctx.shell?.alive) return;
+  e.preventDefault();
+  releaseShell().then(() => app.quit());
+});
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
-  ctx.docks?.releaseAll();
-  ctx.shell?.stop();
+  releaseShell();
   ctx.metrics?.stop();
 });

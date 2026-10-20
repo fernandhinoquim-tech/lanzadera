@@ -308,7 +308,7 @@ export async function activate(item, el, ev = {}) {
         setTimeout(() => el.classList.remove('bounce'), 950);
       }
       closePopup();
-      return launchItem(item, { admin: ev.ctrlKey && ev.shiftKey, newInstance: ev.shiftKey && !ev.ctrlKey });
+      return launchItem(item, { admin: ev.ctrlKey && ev.shiftKey, newInstance: ev.shiftKey && !ev.ctrlKey, toggle: true });
     }
     case 'separator':
       return;

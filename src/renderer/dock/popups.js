@@ -95,7 +95,7 @@ function itemEntry(it, parent) {
   return {
     name: it.name || it.target || 'Sin nombre',
     ico: iconHTML(it, ap()),
-    open: (ev) => launchItem(it, { admin: ev?.ctrlKey && ev?.shiftKey, newInstance: ev?.shiftKey && !ev?.ctrlKey }),
+    open: (ev) => launchItem(it, { admin: ev?.ctrlKey && ev?.shiftKey, newInstance: ev?.shiftKey && !ev?.ctrlKey, toggle: true }),
     running: S.running.has(it.id),
     menu: (x, y) => S.hooks.itemMenu?.(it, parent, x, y),
     dragPath: ['file', 'folder'].includes(it.type) || (it.type === 'app' && it.target && !it.appId) ? it.target : null,

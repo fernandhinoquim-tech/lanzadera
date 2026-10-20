@@ -95,9 +95,10 @@ class DockManager {
         }
         this.applyWindowsMode();
       });
+      // Si el ayudante se reinicia, Windows puede seguir reservando la franja: se recuerda para
+      // volver a pedirla o soltarla cuando el ayudante esté listo otra vez.
       shell.on('exit', () => {
-        for (const w of this.all()) Object.assign(w.lz, { reserved: null, reserveKey: null });
-        this.sync();
+        for (const w of this.all()) w.lz.reserveKey = null;
       });
     }
   }
@@ -306,6 +307,10 @@ class DockManager {
   // Quita las franjas reservadas al salir, para devolver el espacio a las ventanas.
   releaseAll() {
     for (const w of this.all()) this.unreserve(w);
+  }
+
+  hasReservations() {
+    return this.all().some((w) => w.lz.reserved || w.lz.reserveKey);
   }
 
   setInteractive(win, interactive) {

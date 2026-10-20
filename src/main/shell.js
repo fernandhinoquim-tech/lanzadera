@@ -49,14 +49,17 @@ class ShellBridge extends EventEmitter {
     this.stopped = false;
     const exe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
     try {
-      this.child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helperPath(), '-Mode', 'shell', '-ParentPid', String(process.pid)], { windowsHide: true });
+      // Independiente de Lanzadera: si esta se cierra de golpe, el ayudante igual devuelve la
+      // franja reservada antes de terminar (Windows mataría a un hijo normal junto con ella).
+      this.child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helperPath(), '-Mode', 'shell', '-ParentPid', String(process.pid)], { windowsHide: true, detached: true });
     } catch {
       this.child = null;
       return;
     }
     let buf = '';
+    this.child.stdout.setEncoding('utf8');
     this.child.stdout.on('data', (d) => {
-      buf += d.toString('utf8');
+      buf += d;
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i).trim();
@@ -98,7 +101,8 @@ class ShellBridge extends EventEmitter {
       fg.own = fg.pid === process.pid;
       fg.rect = toDip(fg.r);
       this.fg = fg;
-      if (!fg.own && !fg.shell && !fg.desk && fg.h) this.lastExternal = fg;
+      if (fg.desk || fg.shell) this.lastExternal = null;
+      else if (!fg.own && fg.h) this.lastExternal = fg;
       let full = null;
       if (fg.full && fg.m) full = String(screen.getDisplayMatching(toDip(fg.m)).id);
       if (!fg.own) this.setFullscreen(full);
@@ -155,12 +159,25 @@ class ShellBridge extends EventEmitter {
     this.send('wins');
   }
 
-  stop() {
+  // Pide al ayudante que suelte las franjas reservadas y termine; resuelve cuando salió.
+  stop(timeout = 1500) {
     this.stopped = true;
     const child = this.child;
-    if (!child) return;
-    this.send('quit');
-    setTimeout(() => child.kill(), 1500).unref?.();
+    if (!child) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        try {
+          child.kill();
+        } catch {}
+        resolve();
+      }, timeout);
+      child.once('exit', done);
+      this.send('quit');
+    });
   }
 }
 

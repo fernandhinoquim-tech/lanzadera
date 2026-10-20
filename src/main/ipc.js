@@ -44,7 +44,7 @@ function register(ctx) {
   handle('item:launch', async (e, item, opts = {}) => {
     // Un programa ya abierto vuelve al frente en vez de abrir otra copia (Mayús + clic abre otra).
     const focusRunning = store.get().behavior.focusRunning !== false;
-    if (focusRunning && !opts?.newInstance && !opts?.admin && ctx.running?.activate(item)) {
+    if (focusRunning && !opts?.newInstance && !opts?.admin && ctx.running?.activate(item, { toggle: !!opts?.toggle })) {
       usage.record(item);
       return true;
     }

@@ -1,10 +1,12 @@
 // Prueba automática: abre todas las vistas, toma capturas y verifica funciones clave.
 // Se activa con la variable LANZADERA_SMOKE=<carpeta de salida>.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { describePaths } = require('./ipc');
+const { describePaths } = require('./describe');
+const dockplan = require('./dockplan');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -62,6 +64,24 @@ async function run(ctx) {
     await shot(w, '01-dock-reposo');
     return { items: n, bounds: w.getBounds() };
   }, true);
+
+  // Elementos que las pruebas necesitan aunque no estén en la barra inicial.
+  const ensureItems = (list) => {
+    const ws = ctx.store.activeWorkspace();
+    const missing = list.filter((n) => !ws.items.some((i) => Object.entries(n).every(([k, v]) => k === 'name' || i[k] === v)));
+    if (missing.length) ctx.store.setItems(ws.id, [...ws.items, ...missing]);
+    return missing.length;
+  };
+  await step('barra-inicial', async () => {
+    const ws = ctx.store.activeWorkspace();
+    return ws.items.map((i) => (i.type === 'separator' ? '|' : i.type === 'group' ? `[${i.name}: ${i.items.map((k) => k.name).join(', ')}]` : i.name || i.type));
+  });
+  ensureItems([
+    { type: 'widget', widget: 'clock', name: 'Reloj' },
+    { type: 'widget', widget: 'cpu', name: 'Procesador' },
+    { type: 'action', action: 'organize', name: 'Ordenar escritorio' },
+  ]);
+  await wait(1200);
 
   const hoverDock = async (frac = 0.5) =>
     dockEval(`(() => { const r = document.querySelector('.dock-bg').getBoundingClientRect(); const v = ['left','right'].includes(window.__lzTest.edge()); const x = v ? r.left + r.width/2 : r.left + r.width*${frac}; const y = v ? r.top + r.height*${frac} : r.top + r.height/2; window.__lzTest.pointer(x, y); return [x,y]; })()`);
@@ -158,16 +178,28 @@ async function run(ctx) {
   });
 
   // Panel de configuración
-  const routes = ['/bienvenida', '/inicio', '/elementos', '/apariencia', '/posicion', '/comportamiento', '/espacios', '/iconos', '/organizador', '/widgets', '/respaldo', '/acerca', '/agregar'];
+  const routes = ['/bienvenida', '/inicio', '/elementos', '/accesos', '/novedades', '/apariencia', '/posicion', '/comportamiento', '/espacios', '/iconos', '/organizador', '/widgets', '/respaldo', '/acerca', '/agregar'];
   for (const r of routes) {
     await step('panel' + r, async () => {
       const w = ctx.panel.open(r);
       await waitLoad(w);
       w.webContents.send('panel:route', r);
-      await wait(r === '/iconos' || r === '/agregar' ? 2200 : 1000);
+      await wait(r === '/iconos' || r === '/agregar' || r === '/accesos' || r === '/novedades' ? 4000 : 1000);
       await shot(w, '20-panel-' + r.slice(1));
     });
   }
+  await step('bienvenida-pasos', async () => {
+    const w = ctx.panel.open('/bienvenida');
+    await w.webContents.executeJavaScript(`document.querySelectorAll('.modal-back').forEach((m) => m.remove())`);
+    w.webContents.send('panel:route', '/bienvenida');
+    await wait(800);
+    const next = () => w.webContents.executeJavaScript(`(() => { const b = [...document.querySelectorAll('.welcome .actions .btn')].pop(); b?.click(); return !!b; })()`);
+    for (const [i, name] of ['22-bienvenida-ventanas', '23-bienvenida-accesos'].entries()) {
+      await next();
+      await wait(i === 1 ? 4000 : 900);
+      await shot(w, name);
+    }
+  });
   await step('panel-editor-icono', async () => {
     const it = ctx.store.activeWorkspace().items.find((i) => i.type === 'app' || i.type === 'url');
     const w = ctx.panel.open('/iconos?id=' + (it?.id || ''));
@@ -253,16 +285,76 @@ async function run(ctx) {
       if (!Object.values(sizes).some((w) => w >= 128)) throw new Error('Los iconos no salieron en alta resolución: ' + JSON.stringify({ sizes, error: ctx.icons.lastError }));
       return { ms: Date.now() - t0, results, sizes, error: ctx.icons.lastError };
     });
-    await step('pantalla-completa', async () => {
-      const { FullscreenWatcher } = require('./fullscreen');
-      const fw = new FullscreenWatcher();
-      fw.start();
-      await wait(6000);
-      const alive = !!fw.child;
-      const line = fw.lastLine;
-      fw.stop();
-      if (!alive) throw new Error('El vigilante de pantalla completa no siguió activo');
-      return { line, display: fw.displayId };
+    await step('ayudante-shell', async () => {
+      await wait(1000);
+      if (!ctx.shell.alive) throw new Error('El ayudante permanente no está activo: ' + (ctx.shell.lastError || ''));
+      if (!ctx.shell.msgIds) throw new Error('El ayudante no respondió: ' + (ctx.shell.lastError || ctx.shell.lastLine));
+      return { msgIds: ctx.shell.msgIds, fg: ctx.shell.fg, windows: ctx.shell.windows.length, error: ctx.shell.lastError };
+    }, true);
+
+    const dockState = () => {
+      const w = dockWin();
+      return { bounds: w.getBounds(), bar: w.lz.bar, reserved: w.lz.reserved, failed: !!w.lz.reserveFailed, dodged: w.lz.dodged, workArea: screen.getPrimaryDisplay().workArea };
+    };
+    await step('reservar-espacio', async () => {
+      ctx.store.patch({ position: { windows: 'top', edge: 'bottom', idle: 'normal', display: 'primary' } });
+      await wait(1500);
+      const before = screen.getPrimaryDisplay().workArea;
+      ctx.store.patch({ position: { windows: 'reserve' } });
+      await wait(3000);
+      const after = dockState();
+      await shot(dockWin(), '40-reservar-espacio');
+      ctx.store.patch({ position: { windows: 'top' } });
+      await wait(2000);
+      const restored = screen.getPrimaryDisplay().workArea;
+      if (!after.reserved) throw new Error('Windows no reservó la franja: ' + JSON.stringify({ before, after, error: ctx.shell.lastError }));
+      if (after.workArea.height >= before.height) throw new Error('El área de trabajo no se achicó: ' + JSON.stringify({ before, after }));
+      if (restored.height !== before.height) throw new Error('No se devolvió el espacio al quitar la reserva: ' + JSON.stringify({ before, restored }));
+      return { before, after, restored };
+    });
+
+    // Un Bloc de notas maximizado: el dock lo esquiva y lo marca como abierto.
+    let notepad = null;
+    const notepadExe = path.join(sys, 'System32', 'notepad.exe');
+    await step('esquivar-ventanas', async () => {
+      ctx.store.patch({ position: { windows: 'dodge' } });
+      notepad = spawn('powershell.exe', ['-NoProfile', '-Command', `Start-Process -FilePath '${notepadExe}' -WindowStyle Maximized`], { windowsHide: true });
+      await wait(5000);
+      const st = dockState();
+      await shot(dockWin(), '41-esquivar-ventana');
+      const fg = ctx.shell.fg;
+      if (!st.dodged) throw new Error('El dock no se escondió con una ventana maximizada encima: ' + JSON.stringify({ st, fg }));
+      return { st, fg: fg && { max: fg.max, r: fg.r, own: fg.own } };
+    });
+    await step('programas-abiertos', async () => {
+      ctx.store.patch({ position: { windows: 'top' } });
+      ctx.shell.refreshWindows();
+      await wait(1200);
+      // El Bloc de notas nuevo (de la Tienda) corre desde otra carpeta: se usa la ruta real de su ventana.
+      const w = ctx.shell.windows.find((x) => /notepad\.exe$/i.test(x.p || ''));
+      const ws = ctx.store.activeWorkspace();
+      const item = { id: 'smoke-notepad', type: 'app', name: 'Bloc de notas', target: w?.p || notepadExe };
+      ctx.store.setItems(ws.id, [item, ...ws.items.filter((i) => i.id !== item.id)]);
+      ctx.shell.refreshWindows();
+      await wait(2500);
+      const running = ctx.running.ids.includes(item.id);
+      await shot(dockWin(), '42-programa-abierto');
+      const wins = ctx.running.windowsFor(item).map((w) => ({ h: w.h, p: w.p, m: w.m }));
+      const activated = ctx.running.activate(item);
+      await wait(1200);
+      if (!running) throw new Error('No se marcó el Bloc de notas como abierto: ' + JSON.stringify({ wins, all: ctx.shell.windows.map((w) => w.p) }));
+      return { running, wins, activated, fg: ctx.shell.fg && ctx.shell.fg.h };
+    });
+    spawn('taskkill', ['/IM', 'notepad.exe', '/F'], { windowsHide: true }).on('error', () => {});
+    await wait(800);
+    await step('mas-usados', async () => {
+      const entries = await dockplan.windowsUsage();
+      const ranked = dockplan.rankApps(apps, entries);
+      return { entries: entries.length, top: ranked.slice(0, 8).map((r) => ({ name: r.app.name, score: Math.round(r.score) })) };
+    });
+    await step('accesos-escritorio', async () => {
+      const res = await dockplan.desktopGroups(ctx.paths);
+      return { count: res.count, groups: res.groups.map((g) => [g.name, g.items.map((i) => i.name)]) };
     });
     await step('miniatura', async () => {
       const t = await ctx.icons.thumbnail(txt, 128);

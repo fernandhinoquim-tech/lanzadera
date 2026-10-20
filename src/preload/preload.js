@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld('lanz', {
   onMetrics: (cb) => on('metrics', cb),
   monitorResize: (h) => ipcRenderer.send('monitor:resize', h),
   suggestions: () => call('stats:suggest'),
+  running: () => call('running:get'),
+  onRunning: (cb) => on('running', cb),
+  planPreview: () => call('plan:preview'),
+  planApply: (wsId, opts) => call('plan:apply', wsId, opts),
+  categorize: (items) => call('items:categorize', items),
 
   uploadIcons: () => call('icons:upload'),
   importIcons: (paths) => call('icons:import', paths),
@@ -88,6 +93,8 @@ contextBridge.exposeInMainWorld('lanz', {
   run: (cmd, arg) => call('cmd:run', cmd, arg),
 
   setInteractive: (v) => ipcRenderer.send('dock:interactive', v),
+  reportBar: (info) => ipcRenderer.send('dock:bar', info),
+  onDodge: (cb) => on('dock:dodge', cb),
   raise: () => ipcRenderer.send('dock:raise'),
   cursor: () => ipcRenderer.invoke('dock:cursor'),
   focusDock: () => ipcRenderer.send('dock:focus'),

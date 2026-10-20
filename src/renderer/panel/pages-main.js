@@ -7,6 +7,7 @@ import { LUCIDE_VERSION } from '../shared/icon-bank.js';
 import { P, api, ap, patch, activeWs, findAnywhere, updateAnywhere } from './ctx.js';
 import { page, section, card, toggle, seg, select, slider, button, modal, confirmDialog, toast, gl } from './ui.js';
 import { openIconPicker, bindDrop } from './iconpicker.js';
+import { windowPicks } from './pages-plan.js';
 
 const ACCENTS = ['#6366F1', '#0EA5E9', '#14B8A6', '#22C55E', '#EAB308', '#F97316', '#EF4444', '#EC4899', '#A855F7', '#64748B'];
 const SAMPLE = [
@@ -74,6 +75,8 @@ export function homePage() {
     ...section('Rápido',
       card({ icon: 'move', title: 'Posición del dock', control: seg([['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']], c.position.edge, (v) => patch({ position: { edge: v } })) }),
       card({ icon: 'eye', title: 'Cuando no lo uso', control: seg([['normal', 'Visible'], ['compact', 'Compacto'], ['mini', 'Mini'], ['hidden', 'Oculto']], c.position.idle, (v) => patch({ position: { idle: v } })) }),
+      card({ icon: 'app-window', title: 'Con ventanas abiertas', control: seg([['reserve', 'No tapar'], ['dodge', 'Esconderse'], ['top', 'Encima']], c.position.windows, (v) => patch({ position: { windows: v } })) }),
+      card({ icon: 'columns-2', title: 'Armar mi barra en dos zonas', desc: 'Tus programas más usados y tus accesos del escritorio agrupados.', onClick: () => P.navigate('/accesos') }),
       card({ icon: 'sun-moon', title: 'Tema', control: seg([['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], c.appearance.theme, (v) => patch({ appearance: { theme: v } })) }),
       card({ icon: env.dockHidden ? 'eye-off' : 'eye', title: env.dockHidden ? 'El dock está oculto' : 'El dock está visible', control: button(env.dockHidden ? 'Mostrar' : 'Ocultar', () => api.run('toggleDock')) })
     )
@@ -191,6 +194,7 @@ export function positionPage() {
         h('div.muted', { text: 'Haz clic en un borde de la pantalla dibujada.' })
       )
     ),
+    ...section('Con ventanas abiertas', card({ icon: 'app-window', title: 'Qué hace el dock con tus ventanas', desc: 'Con «No tapar ventanas», Windows reserva la franja del dock como hace con la barra de tareas.', col: true, control: windowPicks() })),
     ...section('Cuando no lo uso', card({ icon: 'eye', title: 'Modo de reposo', col: true, control: modes })),
     ...section('Ajuste fino',
       card({ icon: 'monitor', title: 'Pantalla', desc: 'Con varios monitores puedes tener un dock en cada uno.', control: select(displays, pos.display, (v) => set({ display: v })) }),
@@ -249,6 +253,7 @@ export function behaviorPage() {
       card({ icon: 'mouse-pointer-click', title: 'Abrir grupos y carpetas', control: seg([['click', 'Al hacer clic'], ['hover', 'Al pasar el mouse']], b.openStacksOn, (v) => set({ openStacksOn: v })) }),
       card({ icon: 'lock', title: 'Bloquear elementos', desc: 'Evita mover o quitar iconos sin querer.', control: toggle(b.locked, (v) => set({ locked: v })) }),
       card({ icon: 'power', title: 'Iniciar con Windows', control: toggle(b.launchAtLogin, (v) => set({ launchAtLogin: v })) }),
+      card({ icon: 'circle-dot', title: 'Volver a la ventana de un programa abierto', desc: 'Un punto marca los programas abiertos. Al hacer clic, el dock trae su ventana en vez de abrir otra copia (Mayús + clic o clic central abren otra).', control: toggle(b.focusRunning !== false, (v) => set({ focusRunning: v })) }),
       card({ icon: 'fullscreen', title: 'Esconder en pantalla completa', desc: 'Mientras ves un video o juegas, el dock de esa pantalla se esconde solo.', control: toggle(b.hideInFullscreen !== false, (v) => set({ hideInFullscreen: v })) }),
       card({ icon: 'sparkles', title: 'Sugerencias inteligentes', desc: 'Aprende qué programas usas a cada hora para el icono «Sugeridas» y el buscador.', control: toggle(b.suggestions, (v) => set({ suggestions: v })) })
     ),
@@ -284,13 +289,13 @@ export function widgetsPage() {
   );
   return page(
     'Widgets',
-    'Pequeñas herramientas que viven en tu dock. Agrégalas desde Elementos › Agregar › Widgets.',
+    'El monitor de rendimiento vive en el escritorio; el reloj, el portapapeles y las notas, en tu dock.',
     ...section('Monitor de rendimiento',
+      card({ icon: 'picture-in-picture-2', title: 'Monitor en el escritorio', desc: 'Un panel con gráficas en vivo de procesador, memoria, tarjeta gráfica, red y disco. Arrástralo a cualquier parte de la pantalla.', control: toggle(m.gadget, (v) => patch({ monitor: { gadget: v } })) }),
+      card({ icon: 'pin', title: 'Mantenerlo encima de las ventanas', desc: 'Apagado, queda en el escritorio detrás de tus ventanas, como un widget.', control: toggle(m.onTop, (v) => patch({ monitor: { onTop: v } })) }),
+      card({ icon: 'blend', title: 'Transparencia del monitor', control: slider({ min: 0.4, max: 1, step: 0.02, value: m.opacity, format: (v) => Math.round(v * 100) + ' %', onChange: (v) => patch({ monitor: { opacity: v } }) }) }),
       card({ icon: 'activity', title: 'Abrir el monitor completo', desc: 'Procesador por núcleo, memoria, tarjeta gráfica, red, disco, temperaturas, batería y programas que más consumen.', control: button('Abrir', () => api.run('monitor'), { primary: true, icon: 'maximize-2' }) }),
-      card({ icon: 'picture-in-picture-2', title: 'Monitor flotante en el escritorio', desc: 'Una tarjeta con gráficas en vivo que puedes mover a cualquier parte de la pantalla.', control: toggle(m.gadget, (v) => patch({ monitor: { gadget: v } })) }),
-      card({ icon: 'pin', title: 'Mantenerlo encima de las ventanas', control: toggle(m.onTop, (v) => patch({ monitor: { onTop: v } })) }),
-      card({ icon: 'blend', title: 'Transparencia del monitor flotante', control: slider({ min: 0.4, max: 1, step: 0.02, value: m.opacity, format: (v) => Math.round(v * 100) + ' %', onChange: (v) => patch({ monitor: { opacity: v } }) }) }),
-      card({ icon: 'plus', title: 'Agregar al dock', desc: 'Cada widget muestra su valor y una gráfica en vivo; al hacer clic abre el panel de rendimiento.', col: true, control: chips })
+      card({ icon: 'plus', title: 'También en la barra (opcional)', desc: 'Si prefieres verlas en el dock, cada métrica muestra su valor y una gráfica; al hacer clic abre el panel de rendimiento.', col: true, control: chips })
     ),
     ...section('Portapapeles',
       card({ icon: 'clipboard-list', title: 'Guardar historial de lo que copias', desc: 'Respeta los gestores de contraseñas que piden no ser registrados.', control: toggle(c.clipboard.enabled, (v) => patch({ clipboard: { enabled: v } })) }),

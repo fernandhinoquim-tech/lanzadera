@@ -6,10 +6,13 @@ import { P, api } from './ctx.js';
 import { homePage, appearancePage, positionPage, behaviorPage, widgetsPage, iconsPage, backupPage, aboutPage } from './pages-main.js';
 import { itemsPage, workspacesPage, openAddDialog } from './pages-items.js';
 import { organizerPage, welcomePage } from './pages-org.js';
+import { accesosPage, novedadesPage } from './pages-plan.js';
 
 const ROUTES = {
   '/inicio': ['Inicio', 'house', homePage],
   '/elementos': ['Elementos del dock', 'layout-grid', itemsPage],
+  '/accesos': ['Accesos y grupos', 'columns-2', accesosPage],
+  '/novedades': ['Novedades', 'sparkles', novedadesPage],
   '/apariencia': ['Apariencia', 'palette', appearancePage],
   '/posicion': ['Posición', 'move', positionPage],
   '/comportamiento': ['Comportamiento', 'mouse-pointer-click', behaviorPage],
@@ -20,7 +23,7 @@ const ROUTES = {
   '/respaldo': ['Copia de seguridad', 'archive', backupPage],
   '/acerca': ['Acerca de', 'info', aboutPage],
 };
-const NAV = ['/inicio', '/elementos', '/apariencia', '/posicion', '/comportamiento', '-', '/espacios', '/iconos', '/organizador', '/widgets', '-', '/respaldo', '/acerca'];
+const NAV = ['/inicio', '/elementos', '/accesos', '/apariencia', '/posicion', '/comportamiento', '-', '/espacios', '/iconos', '/organizador', '/widgets', '-', '/respaldo', '/acerca'];
 
 const nav = document.getElementById('nav');
 const content = document.getElementById('content');

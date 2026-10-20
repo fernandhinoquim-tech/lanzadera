@@ -11,6 +11,8 @@ export const S = {
   stage: null,
   dragging: false,
   frozen: false,
+  dodged: false,
+  running: new Set(),
   hooks: {},
 };
 
@@ -18,6 +20,11 @@ export const api = window.lanz;
 
 export function ap() {
   return S.config.appearance;
+}
+
+// Modo de reposo efectivo: al esquivar una ventana, el dock se esconde contra el borde.
+export function idleMode() {
+  return S.dodged ? 'hidden' : S.config.position.idle;
 }
 
 export function isVertical() {

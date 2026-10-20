@@ -33,7 +33,7 @@ function makeState(dark, patch = {}) {
   cfg.notes = [{ id: 'n1', text: 'Llamar al dentista el jueves\nComprar regalo para mamá 🎁', color: 'ambar', ts: Date.now() }];
   cfg.customIcons = [];
   deepMerge(cfg, patch);
-  return { config: sanitizeConfig(cfg), env: { dark, accent: '#6366F1', platform: 'win32', win11: true, version: '1.0.0', paths, displays: [{ id: '1', label: 'Pantalla integrada', primary: true, size: '1920×1080' }, { id: '2', label: 'DELL U2720Q', primary: false, size: '2560×1440' }], hotkeys: { search: true }, updater: { status: 'none', current: '1.0.0' }, dockHidden: false, packaged: true } };
+  return { config: sanitizeConfig(cfg), env: { dark, accent: '#6366F1', platform: 'win32', win11: true, version: '1.1.0', paths, displays: [{ id: '1', label: 'Pantalla integrada', primary: true, size: '1920×1080' }, { id: '2', label: 'DELL U2720Q', primary: false, size: '2560×1440' }], hotkeys: { search: true }, updater: { status: 'none', current: '1.0.0' }, dockHidden: false, packaged: true } };
 }
 
 const mockScript = (state) => `
@@ -99,9 +99,29 @@ const mockScript = (state) => `
     monitorResize: () => {},
     sysStats: async () => ({ cpu: 23, mem: 61, memUsed: 9.8e9, memTotal: 16e9, disk: { total: 512e9, free: 201e9, root: 'C:\\\\' }, uptime: 93000, cpuModel: 'Intel(R) Core(TM) i7-1255U', cores: 12 }),
     suggestions: async () => state.config.workspaces[0].items.filter((i) => i.type === 'app').slice(0, 4),
+    running: async () => state.config.workspaces[0].items.filter((i) => i.type === 'app').slice(0, 2).map((i) => i.id),
+    onRunning: on('running'),
+    onDodge: on('dodge'),
+    reportBar: () => {},
+    categorize: async (items) => items.map(() => 'Oficina'),
+    planApply: async () => ({ added: 2, groups: 3 }),
+    planPreview: async () => {
+      const a = ${JSON.stringify(apps)};
+      const it = (n) => ({ type: 'app', name: n, appId: (a.find((x) => x.name === n) || {}).appId || n });
+      return {
+        mostUsed: { source: 'windows', items: ['Google Chrome', 'Word', 'Excel', 'WhatsApp', 'Spotify', 'Visual Studio Code'].map(it) },
+        desktop: { count: 14, groups: [
+          { name: 'Oficina', gradient: 'indigo', items: ['Word', 'Excel', 'PowerPoint', 'Adobe Acrobat'].map(it) },
+          { name: 'Comunicación', gradient: 'menta', items: ['WhatsApp', 'Microsoft Teams', 'Zoom'].map(it) },
+          { name: 'Juegos', gradient: 'atardecer', items: ['Steam', 'Xbox'].map(it) },
+          { name: 'Multimedia', gradient: 'rosa', items: ['Spotify', 'VLC media player', 'OBS Studio'].map(it) },
+          { name: 'Otros', gradient: 'aurora', items: ['Notion', 'Canva'].map(it) },
+        ] },
+      };
+    },
     uploadIcons: async () => [], importIcons: async () => [], deleteIcon: async () => true, clearIconCache: async () => true, onIconsRefresh: on('icons'),
     exportBackup: async () => ({}), importBackup: async () => ({}), resetAll: async () => true,
-    appInfo: async () => ({ version: '1.0.0', electron: '44.5.1', chrome: '146', userData: 'C:\\\\Users\\\\Fer\\\\AppData\\\\Roaming\\\\Lanzadera', updater: { status: 'none' } }),
+    appInfo: async () => ({ version: '1.1.0', electron: '44.5.1', chrome: '146', userData: 'C:\\\\Users\\\\Fer\\\\AppData\\\\Roaming\\\\Lanzadera', updater: { status: 'none' } }),
     checkUpdate: async () => true, installUpdate: async () => true, onUpdate: on('update'), hotkeyStatus: async () => ({ search: true }), run: async () => true,
     setInteractive: () => {}, raise: () => {}, cursor: async () => null, focusDock: () => {}, openPanel: () => {}, openSearch: () => {}, hideSearch: () => {},
     onSearchShown: on('shown'), onSearchHidden: on('hidden'), onRoute: on('route'), closeWindow: () => {}, minimizeWindow: () => {},

@@ -95,7 +95,8 @@ function itemEntry(it, parent) {
   return {
     name: it.name || it.target || 'Sin nombre',
     ico: iconHTML(it, ap()),
-    open: (ev) => launchItem(it, { admin: ev?.ctrlKey && ev?.shiftKey }),
+    open: (ev) => launchItem(it, { admin: ev?.ctrlKey && ev?.shiftKey, newInstance: ev?.shiftKey && !ev?.ctrlKey }),
+    running: S.running.has(it.id),
     menu: (x, y) => S.hooks.itemMenu?.(it, parent, x, y),
     dragPath: ['file', 'folder'].includes(it.type) || (it.type === 'app' && it.target && !it.appId) ? it.target : null,
   };
@@ -166,7 +167,7 @@ function gridView(entries) {
   const grid = h('div.grid', { style: { '--cols': Math.min(cols, Math.max(1, entries.length)) } });
   grid.style.setProperty('--cols', String(Math.max(Math.min(cols, entries.length), 3)));
   for (const e of entries) {
-    const cell = h('div.cell', { title: e.meta ? `${e.name}\n${e.meta}` : e.name, html: `<div class="cico">${e.ico}</div><div class="cname">${esc(e.name)}</div>` });
+    const cell = h('div.cell' + (e.running ? '.running' : ''), { title: e.meta ? `${e.name}\n${e.meta}` : e.name, html: `<div class="cico">${e.ico}<i class="rdot"></i></div><div class="cname">${esc(e.name)}</div>` });
     bindEntry(cell, e);
     grid.append(cell);
   }
@@ -176,9 +177,9 @@ function gridView(entries) {
 function listView(entries) {
   const list = h('div.list', { style: { width: '340px' } });
   for (const e of entries) {
-    const row = h('div.row', {
+    const row = h('div.row' + (e.running ? '.running' : ''), {
       html:
-        `<div class="rico">${e.ico}</div><div class="rtext"><div class="rname">${esc(e.name)}</div>${e.meta ? `<div class="rmeta">${esc(e.meta)}</div>` : ''}</div>` +
+        `<div class="rico">${e.ico}<i class="rdot"></i></div><div class="rtext"><div class="rname">${esc(e.name)}</div>${e.meta ? `<div class="rmeta">${esc(e.meta)}</div>` : ''}</div>` +
         (e.remove ? `<div class="ract"><button class="btn" data-a="rm" title="Quitar">${gl('x')}</button></div>` : ''),
     });
     if (e.remove) row.querySelector('[data-a=rm]').addEventListener('click', (ev) => (ev.stopPropagation(), e.remove()));

@@ -20,7 +20,9 @@ const { createBackup } = require('./backup');
 const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica } = require('./windows');
 const { Metrics } = require('./metrics');
 const { createTray } = require('./tray');
-const { FullscreenWatcher } = require('./fullscreen');
+const { ShellBridge } = require('./shell');
+const { RunningTracker } = require('./running');
+const dockplan = require('./dockplan');
 const { register } = require('./ipc');
 
 registerSchemes();
@@ -169,6 +171,9 @@ async function resetAll() {
   app.exit(0);
 }
 
+// Versión con novedades que conviene mostrar al actualizar.
+const NEWS_VERSION = '1.1.0';
+
 function withTimeout(promise, ms, fallback) {
   return Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
 }
@@ -195,7 +200,9 @@ async function init() {
   ctx.updater = new Updater();
   ctx.searchIndex = new SearchIndex({ store: ctx.store, apps: ctx.apps, paths: ctx.paths });
   ctx.backup = createBackup({ store: ctx.store, customDir: ctx.customDir });
-  ctx.docks = new DockManager(ctx.store);
+  ctx.shell = new ShellBridge();
+  ctx.running = new RunningTracker(ctx.store, ctx.shell);
+  ctx.docks = new DockManager(ctx.store, ctx.shell);
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
   ctx.metrics = new Metrics();
@@ -210,8 +217,13 @@ async function init() {
   register(ctx);
 
   if (!ctx.store.get().workspaces.length) {
-    const apps = process.platform === 'win32' ? await withTimeout(ctx.apps.refresh(), 25000, []) : [];
-    const ws = buildWorkspaces({ apps, paths: ctx.paths, platform: process.platform });
+    // Primer arranque: favoritos según lo que más usas en Windows y grupos con tus accesos del escritorio.
+    const win = process.platform === 'win32';
+    const apps = win ? await withTimeout(ctx.apps.refresh(), 25000, []) : [];
+    const [used, desk] = win
+      ? await Promise.all([withTimeout(dockplan.mostUsed({ apps, usage: ctx.usage }), 20000, { items: [] }), withTimeout(dockplan.desktopGroups(ctx.paths), 15000, { groups: [] })])
+      : [{ items: [] }, { groups: [] }];
+    const ws = buildWorkspaces({ apps, paths: ctx.paths, platform: process.platform, favorites: used.items, desktopGroups: desk.groups });
     ctx.store.patch({ workspaces: ws, activeWorkspace: ws[0].id });
   } else {
     ctx.apps.list().catch(() => {});
@@ -224,9 +236,9 @@ async function init() {
   ctx.docks.sync();
   ctx.monitor.sync();
   ctx.tray = createTray(ctx);
-  ctx.fullscreen = new FullscreenWatcher();
-  ctx.fullscreen.on('change', (id) => ctx.docks.setFullscreen(id));
-  if (!process.env.LANZADERA_SMOKE) ctx.fullscreen.start();
+  ctx.shell.on('fullscreen', (id) => ctx.docks.setFullscreen(id));
+  ctx.running.on('change', (ids) => broadcast('running', ids));
+  ctx.shell.start();
 
   let lastTheme = ctx.store.get().appearance.theme;
   ctx.store.on('change', (cfg) => {
@@ -235,7 +247,7 @@ async function init() {
       nativeTheme.themeSource = lastTheme;
     }
     ctx.docks.sync();
-    ctx.docks.setFullscreen(ctx.fullscreen.displayId);
+    ctx.docks.setFullscreen(ctx.shell.fullscreenDisplay);
     ctx.monitor.sync();
     ctx.clip.apply();
     registerHotkeys();
@@ -271,7 +283,14 @@ async function init() {
     });
   });
 
-  if (ctx.store.get().firstRun && !process.env.LANZADERA_SMOKE) ctx.panel.open('/bienvenida');
+  // Bienvenida en el primer arranque; después de actualizar, las novedades de la versión.
+  const cfg = ctx.store.get();
+  const version = app.getVersion();
+  if (!process.env.LANZADERA_SMOKE) {
+    if (cfg.firstRun) ctx.panel.open('/bienvenida');
+    else if (cfg.seenVersion !== version && NEWS_VERSION.localeCompare(cfg.seenVersion || '0', undefined, { numeric: true }) > 0) ctx.panel.open('/novedades');
+    else if (cfg.seenVersion !== version) ctx.store.patch({ seenVersion: version });
+  }
   if (process.env.LANZADERA_SMOKE) require('./smoke').run(ctx);
 }
 
@@ -281,6 +300,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', flushAll);
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
-  ctx.fullscreen?.stop();
+  ctx.docks?.releaseAll();
+  ctx.shell?.stop();
   ctx.metrics?.stop();
 });

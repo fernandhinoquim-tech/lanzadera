@@ -1,7 +1,7 @@
 // Lanzadera — la barra (dock): render, efecto lupa, modos de reposo, arrastrar y soltar.
-import { h, esc, applyTheme, clamp } from '../shared/dom.js';
+import { h, esc, applyTheme, clamp, uid } from '../shared/dom.js';
 import { iconHTML, installIconFallbacks } from '../shared/icon-view.js';
-import { S, api, ap, isVertical, findItem, saveItems, toast } from './core.js';
+import { S, api, ap, isVertical, idleMode, findItem, saveItems, toast, launchItem } from './core.js';
 import { openMenu, closeMenu, menuOpen } from './menu.js';
 import { closePopup, popupOpen, popupItemId, popupIsHover, openPopup, refreshIfShowing } from './popups.js';
 import { widgetTile, METRIC_WIDGETS } from './widgets.js';
@@ -68,12 +68,18 @@ function tileFor(item) {
   return iconHTML(item, ap());
 }
 
+function stageClass() {
+  const c = S.config;
+  const pos = c.position;
+  stage.className = [`edge-${pos.edge}`, `align-${pos.align}`, `mode-${idleMode()}`, `style-${c.appearance.dockStyle}`, expanded ? 'expanded' : '', c.appearance.labels === 'always' && !isVertical() ? 'captions' : ''].join(' ');
+}
+
 function render() {
   const c = S.config;
   const pos = c.position;
   closeMenu();
   closePopup();
-  stage.className = [`edge-${pos.edge}`, `align-${pos.align}`, `mode-${pos.idle}`, `style-${c.appearance.dockStyle}`, expanded ? 'expanded' : '', c.appearance.labels === 'always' && !isVertical() ? 'captions' : ''].join(' ');
+  stageClass();
   stage.style.setProperty('--margin', pos.margin + 'px');
   stage.style.setProperty('--dock-alpha', c.appearance.opacity);
 
@@ -86,7 +92,7 @@ function render() {
   els = items.map((item) => {
     const el = h('div.item' + (item.type === 'separator' ? '.sep' : ''), { dataset: { id: item.id, type: item.type } });
     if (item.type !== 'separator') {
-      el.innerHTML = `<div class="ico">${tileFor(item)}</div><span class="badge"></span>`;
+      el.innerHTML = `<div class="ico">${tileFor(item)}</div><span class="badge"></span><span class="dot"></span>`;
       if (c.appearance.labels === 'always' && !isVertical()) el.append(h('span.caption', { text: item.name || '' }));
     }
     itemsEl.append(el);
@@ -105,9 +111,36 @@ function render() {
   }
   watchFolders();
   updateBadges();
+  applyRunning();
   layoutHandle();
   metricsDemand();
   refreshHit();
+  reportBar();
+}
+
+// Punto bajo los programas que están abiertos.
+function applyRunning() {
+  for (const { item, el } of els) el.classList.toggle('running', S.running.has(item.id));
+}
+
+// Informa dónde queda la barra en reposo, para reservar ese espacio o esquivar ventanas.
+let barTimer = null;
+let lastBar = '';
+function reportBar(delay = 400) {
+  clearTimeout(barTimer);
+  barTimer = setTimeout(() => {
+    if (expanded || S.dodged || S.dragging || !S.config) return;
+    const mode = S.config.position.idle;
+    const r = mode === 'hidden' ? null : (mode === 'mini' ? handle : dock.querySelector('.dock-bg'))?.getBoundingClientRect();
+    const ok = r && r.width > 0 && r.height > 0;
+    const thickness = !ok ? 0 : S.edge === 'bottom' ? innerHeight - r.top : S.edge === 'top' ? r.bottom : S.edge === 'left' ? r.right : innerWidth - r.left;
+    const info = ok ? { x: r.left, y: r.top, width: r.width, height: r.height, thickness } : { x: 0, y: 0, width: 0, height: 0, thickness: 0 };
+    for (const k in info) info[k] = Math.round(info[k]);
+    const sig = JSON.stringify(info);
+    if (sig === lastBar) return;
+    lastBar = sig;
+    api.reportBar(info);
+  }, delay);
 }
 
 // Pide datos de rendimiento solo si hay widgets o el panel de rendimiento está abierto.
@@ -338,13 +371,14 @@ function setExpanded(v) {
   if (!v) {
     hoverIdx = -1;
     label.classList.remove('show');
+    reportBar();
   }
   schedule();
   refreshHit();
 }
 
 function wantsOpen(p) {
-  const mode = S.config.position.idle;
+  const mode = idleMode();
   if (S.dragging || popupOpen() || menuOpen()) return true;
   if (!p) return false;
   if (expanded) return overDockZone(p) || overLayer(p);
@@ -355,7 +389,7 @@ function wantsOpen(p) {
 
 function evaluate() {
   const want = wantsOpen(pointer);
-  const mode = S.config.position.idle;
+  const mode = idleMode();
   if (want && !expanded) {
     clearTimeout(hideTimer);
     hideTimer = null;
@@ -387,7 +421,7 @@ function evaluate() {
 // Decide si la ventana debe recibir el mouse o dejarlo pasar al escritorio.
 function refreshHit() {
   const p = pointer;
-  const mode = S.config?.position.idle;
+  const mode = S.config ? idleMode() : 'normal';
   let need = false;
   if (S.dragging || externalDrag) need = true;
   else if (p) {
@@ -537,6 +571,14 @@ itemsEl.addEventListener('pointerup', (e) => {
   activate(item, el, e);
 });
 
+// Clic central: abre otra ventana del programa aunque ya esté abierto.
+itemsEl.addEventListener('auxclick', (e) => {
+  if (e.button !== 1) return;
+  const el = e.target.closest('.item');
+  const entry = el && els.find((x) => x.el === el);
+  if (entry && ['app', 'file', 'folder', 'url'].includes(entry.item.type)) launchItem(entry.item, { newInstance: true });
+});
+
 itemsEl.addEventListener('pointercancel', () => {
   if (press?.started) cancelDrag();
   press = null;
@@ -587,6 +629,8 @@ document.addEventListener('keydown', (e) => {
 
 let ghost = null;
 let drag = null;
+const LAUNCHABLE = new Set(['app', 'file', 'folder', 'url']);
+const GENERIC = new Set(['Otros', 'Sitios web', 'Carpetas']);
 
 function startDrag(p, e) {
   p.started = true;
@@ -599,7 +643,7 @@ function startDrag(p, e) {
   ghost.style.width = r.width + 'px';
   ghost.style.height = r.height + 'px';
   S.layer.append(ghost);
-  drag = { item, el, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height, overGroup: null, groupTimer: null, poof: false };
+  drag = { item, el, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height, overGroup: null, mergeWith: null, mergeTimer: null, poof: false };
   el.classList.add('dragging');
   targets = els.map(() => 1);
   schedule();
@@ -632,14 +676,32 @@ function moveDrag(e) {
   ghost.classList.toggle('poof', drag.poof);
   if (drag.poof) return setGroupTarget(null);
 
-  // ¿Encima del centro de un grupo? → soltar dentro.
+  // ¿Encima del centro de un grupo? → soltar dentro. ¿Del centro de otro programa? → si se
+  // mantiene un momento, se arma un grupo nuevo con los dos.
+  const mergeable = LAUNCHABLE.has(drag.item.type);
   const overIdx = els.findIndex(({ el, item }) => {
-    if (item.type !== 'group' || el === drag.el || drag.item.type === 'group') return false;
+    if (el === drag.el) return false;
+    const intoGroup = item.type === 'group' && drag.item.type !== 'group';
+    if (!intoGroup && !(mergeable && LAUNCHABLE.has(item.type))) return false;
     const q = el.getBoundingClientRect();
-    const m = q.width * 0.22;
+    const m = q.width * (intoGroup ? 0.22 : 0.26);
     return inRect(p, { left: q.left + m, right: q.right - m, top: q.top + m, bottom: q.bottom - m });
   });
-  if (overIdx >= 0) return setGroupTarget(els[overIdx]);
+  if (overIdx >= 0) {
+    const entry = els[overIdx];
+    if (entry.item.type === 'group') return setGroupTarget(entry);
+    if (drag.mergeWith !== entry) {
+      drag.mergeWith = entry;
+      clearTimeout(drag.mergeTimer);
+      setGroupTarget(null);
+      drag.mergeTimer = setTimeout(() => {
+        if (drag?.mergeWith === entry) setGroupTarget(entry);
+      }, 450);
+    }
+    return;
+  }
+  drag.mergeWith = null;
+  clearTimeout(drag.mergeTimer);
   setGroupTarget(null);
 
   const from = els.findIndex((x) => x.el === drag.el);
@@ -684,6 +746,7 @@ async function endDrag() {
     const { removeItem } = await import('./actions.js');
     return removeItem(d.item.id);
   }
+  if (d.overGroup && d.overGroup.item.type !== 'group') return mergeIntoGroup(d.item, d.overGroup.item);
   if (d.overGroup) {
     const items = JSON.parse(JSON.stringify(S.ws.items)).filter((i) => i.id !== d.item.id);
     const g = items.find((i) => i.id === d.overGroup.item.id);
@@ -695,12 +758,29 @@ async function endDrag() {
   if (order.map((i) => i.id).join() !== S.ws.items.map((i) => i.id).join()) await saveItems(order);
 }
 
+// Junta dos programas en un grupo nuevo, en el lugar del que quedó debajo.
+async function mergeIntoGroup(dragged, target) {
+  const items = JSON.parse(JSON.stringify(S.ws.items));
+  const ti = items.findIndex((i) => i.id === target.id);
+  if (ti < 0) return;
+  let name = 'Mis accesos';
+  try {
+    const [a, b] = await api.categorize([target, dragged]);
+    if (a === b && !GENERIC.has(a)) name = a;
+  } catch {}
+  const g = { id: uid(), type: 'group', name, layout: 'grid', items: [items[ti], dragged], icon: { kind: 'auto' } };
+  items[ti] = g;
+  await saveItems(items.filter((i) => i.id !== dragged.id));
+  toast(`Grupo «${name}» creado`, { action: { label: 'Renombrar', fn: () => api.openPanel(`/elementos?id=${g.id}`) } });
+}
+
 function cancelDrag() {
   cleanupDrag();
   render();
 }
 
 function cleanupDrag() {
+  clearTimeout(drag?.mergeTimer);
   drag?.el.classList.remove('dragging');
   drag?.overGroup?.el.classList.remove('drop-into');
   ghost?.remove();
@@ -864,6 +944,24 @@ async function boot() {
     setState(S.state);
   });
   computeStackBadges();
+  api.onRunning((ids) => {
+    S.running = new Set(ids || []);
+    applyRunning();
+  });
+  api.running().then((ids) => {
+    S.running = new Set(ids || []);
+    applyRunning();
+  }).catch(() => {});
+  api.onDodge((v) => {
+    if (S.dodged === !!v) return;
+    S.dodged = !!v;
+    stageClass();
+    if (S.dodged && expanded && !(pointer && (overDockZone(pointer) || overLayer(pointer)))) setExpanded(false);
+    evaluate();
+    refreshHit();
+    schedule();
+    if (!S.dodged) reportBar();
+  });
   setInterval(refreshWidgets, 10000);
   api.onMetrics((m) => {
     S.metrics = m;

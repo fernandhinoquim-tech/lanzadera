@@ -1,6 +1,9 @@
 # Lanzadera - ayudante de Windows.
 #   -Mode apps   : lista las apps del menu Inicio (incluidas las de Microsoft Store) en JSON.
 #   -Mode icons  : extrae iconos en alta resolucion (256 px) a archivos PNG.
+#   -Mode metrics: recolector de rendimiento (una linea JSON por segundo).
+#   -Mode usage  : programas mas usados segun Windows (UserAssist).
+#   -Mode shell  : ventana activa, programas abiertos, reserva de espacio y foco (permanente).
 param(
   [Parameter(Mandatory = $true)][string]$Mode,
   [string]$In = '',
@@ -398,63 +401,358 @@ public static class LzMet {
   exit 0
 }
 
-if ($Mode -eq 'watch') {
-  # Vigila si la ventana activa ocupa toda una pantalla (video o juego en pantalla completa).
+if ($Mode -eq 'usage') {
+  # Programas mas usados segun Windows (UserAssist): solo lectura y solo en este equipo.
+  $res = New-Object System.Collections.ArrayList
+  foreach ($g in @('{CEBFF5CD-ACE2-4F4F-9178-9926F41749EA}', '{F4E57C4B-2036-45F0-A9AB-443BCFE33D9F}')) {
+    try {
+      $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\$g\Count")
+      if (-not $key) { continue }
+      foreach ($n in $key.GetValueNames()) {
+        $d = $key.GetValue($n)
+        if (-not ($d -is [byte[]]) -or $d.Length -lt 68) { continue }
+        # Los nombres vienen en ROT13.
+        $chars = $n.ToCharArray()
+        for ($i = 0; $i -lt $chars.Length; $i++) {
+          $c = [int]$chars[$i]
+          if ($c -ge 65 -and $c -le 90) { $chars[$i] = [char]((($c - 65 + 13) % 26) + 65) }
+          elseif ($c -ge 97 -and $c -le 122) { $chars[$i] = [char]((($c - 97 + 13) % 26) + 97) }
+        }
+        $runs = [BitConverter]::ToInt32($d, 4)
+        $focus = [BitConverter]::ToInt32($d, 12)
+        $ft = [BitConverter]::ToInt64($d, 60)
+        $last = 0
+        if ($ft -gt 116444736000000000) { $last = [int64][Math]::Floor(($ft - 116444736000000000) / 10000) }
+        if ($runs -le 0 -and $focus -le 0) { continue }
+        [void]$res.Add([pscustomobject]@{ id = (-join $chars); runs = $runs; focus = $focus; last = $last })
+      }
+      $key.Close()
+    } catch {}
+  }
+  Write-Json @($res)
+  exit 0
+}
+
+if ($Mode -eq 'shell') {
+  # Proceso permanente: informa la ventana activa (pantalla completa, para esquivarla) y los
+  # programas abiertos, reserva el espacio del dock (AppBar) y trae ventanas al frente.
+  # Ordenes por la entrada estandar, una por linea: bar, unbar, focus, min, quit.
   $cs = @'
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
-public static class LzFg {
+public static class LzShell {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
   [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+  [StructLayout(LayoutKind.Sequential)] public struct APPBARDATA { public int cbSize; public IntPtr hWnd; public uint uCallbackMessage; public uint uEdge; public RECT rc; public IntPtr lParam; }
+  [StructLayout(LayoutKind.Sequential, Pack = 4)] public struct PROPERTYKEY { public Guid fmtid; public uint pid; }
+  [StructLayout(LayoutKind.Sequential)] public struct PROPVARIANT { public ushort vt; public ushort r1; public ushort r2; public ushort r3; public IntPtr p; public IntPtr p2; }
+
+  [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  public interface IPropertyStore {
+    [PreserveSig] int GetCount(out uint c);
+    [PreserveSig] int GetAt(uint i, out PROPERTYKEY k);
+    [PreserveSig] int GetValue(ref PROPERTYKEY k, out PROPVARIANT v);
+    [PreserveSig] int SetValue(ref PROPERTYKEY k, ref PROPVARIANT v);
+    [PreserveSig] int Commit();
+  }
+
+  public delegate bool EnumProc(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr l);
   [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
   [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowTextLength(IntPtr h);
   [DllImport("user32.dll")] static extern IntPtr GetShellWindow();
   [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr h);
+  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
+  [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] static extern int GetWindowLong(IntPtr h, int i);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+  [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
+  [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
   [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint RegisterWindowMessage(string s);
+  [DllImport("shell32.dll")] static extern UIntPtr SHAppBarMessage(uint msg, ref APPBARDATA d);
+  [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr h, int attr, out int v, int size);
+  [DllImport("kernel32.dll")] static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern bool QueryFullProcessImageName(IntPtr h, int flags, StringBuilder s, ref int size);
+  [DllImport("shell32.dll")] static extern int SHGetPropertyStoreForWindow(IntPtr h, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out IPropertyStore ps);
+  [DllImport("ole32.dll")] static extern int PropVariantClear(ref PROPVARIANT v);
 
-  public static void Init() { try { SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch { } }
+  class WinInfo { public uint Pid; public string Path; public string Aumid; }
 
-  public static string State() {
-    IntPtr h = GetForegroundWindow();
-    if (h == IntPtr.Zero || h == GetShellWindow() || !IsWindowVisible(h) || IsZoomed(h)) return "0";
+  static readonly object outLock = new object();
+  static readonly Queue<string> cmds = new Queue<string>();
+  static readonly Dictionary<long, WinInfo> infos = new Dictionary<long, WinInfo>();
+  static readonly Dictionary<long, uint> bars = new Dictionary<long, uint>();
+  static uint cbMsg = 0;
+  static uint parent = 0;
+  static bool winsNow = false;
+
+  static System.IO.StreamWriter writer;
+
+  static void Out(string s) {
+    lock (outLock) { writer.WriteLine(s); writer.Flush(); }
+  }
+
+  static string J(string s) {
+    if (s == null) return "\"\"";
+    StringBuilder b = new StringBuilder("\"");
+    foreach (char c in s) {
+      if (c == '"' || c == '\\') { b.Append('\\'); b.Append(c); }
+      else if (c < 0x20) b.Append("\\u" + ((int)c).ToString("x4"));
+      else b.Append(c);
+    }
+    return b.Append('"').ToString();
+  }
+
+  static string R(RECT r) { return "[" + r.L + "," + r.T + "," + r.R + "," + r.B + "]"; }
+
+  static string ClassOf(IntPtr h) {
     StringBuilder sb = new StringBuilder(256);
     GetClassName(h, sb, 256);
-    string c = sb.ToString();
-    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd" || c == "Windows.UI.Core.CoreWindow" || c == "XamlExplorerHostIslandWindow") return "0";
+    return sb.ToString();
+  }
+
+  static void ReadLoop() {
+    try {
+      string line;
+      while ((line = Console.In.ReadLine()) != null) lock (cmds) cmds.Enqueue(line.Trim());
+    } catch { }
+    lock (cmds) cmds.Enqueue("quit");
+  }
+
+  static string Next() {
+    lock (cmds) return cmds.Count > 0 ? cmds.Dequeue() : null;
+  }
+
+  // Ventana activa: rectangulo, pantalla completa y si es el escritorio o el menu Inicio.
+  static string Fg() {
+    IntPtr h = GetForegroundWindow();
+    if (h == IntPtr.Zero || h == GetShellWindow()) return "{\"h\":0,\"desk\":1}";
+    string c = ClassOf(h);
+    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return "{\"h\":" + h.ToInt64() + ",\"desk\":1}";
+    uint pid;
+    GetWindowThreadProcessId(h, out pid);
+    bool shell = c == "Windows.UI.Core.CoreWindow" || c == "XamlExplorerHostIslandWindow" || c == "TopLevelWindowForOverflowXamlIsland" || c == "NotifyIconOverflowWindow";
     RECT r;
-    if (!GetWindowRect(h, out r)) return "0";
+    if (!GetWindowRect(h, out r)) return "{\"h\":" + h.ToInt64() + ",\"pid\":" + pid + ",\"shell\":" + (shell ? 1 : 0) + "}";
+    bool zoomed = IsZoomed(h), min = IsIconic(h), vis = IsWindowVisible(h);
     MONITORINFO mi = new MONITORINFO();
     mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
-    if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return "0";
-    RECT m = mi.rcMonitor;
-    bool full = r.L <= m.L && r.T <= m.T && r.R >= m.R && r.B >= m.B;
-    return full ? ("1," + m.L + "," + m.T + "," + m.R + "," + m.B) : "0";
+    bool full = false;
+    string mon = "null";
+    if (GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) {
+      RECT m = mi.rcMonitor;
+      mon = R(m);
+      full = vis && !zoomed && !shell && r.L <= m.L && r.T <= m.T && r.R >= m.R && r.B >= m.B;
+    }
+    return "{\"h\":" + h.ToInt64() + ",\"pid\":" + pid + ",\"r\":" + R(r) + ",\"m\":" + mon + ",\"full\":" + (full ? 1 : 0) +
+      ",\"max\":" + (zoomed ? 1 : 0) + ",\"min\":" + (min ? 1 : 0) + ",\"shell\":" + (shell ? 1 : 0) + "}";
+  }
+
+  static string ProcPath(uint pid) {
+    IntPtr h = OpenProcess(0x1000, false, pid);
+    if (h == IntPtr.Zero) return "";
+    try {
+      StringBuilder sb = new StringBuilder(1024);
+      int n = sb.Capacity;
+      return QueryFullProcessImageName(h, 0, sb, ref n) ? sb.ToString() : "";
+    } finally { CloseHandle(h); }
+  }
+
+  static string Aumid(IntPtr hwnd) {
+    IPropertyStore ps = null;
+    try {
+      Guid iid = typeof(IPropertyStore).GUID;
+      if (SHGetPropertyStoreForWindow(hwnd, ref iid, out ps) != 0 || ps == null) return "";
+      PROPERTYKEY k = new PROPERTYKEY();
+      k.fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3");
+      k.pid = 5;
+      PROPVARIANT v;
+      if (ps.GetValue(ref k, out v) != 0) return "";
+      string s = v.vt == 31 && v.p != IntPtr.Zero ? Marshal.PtrToStringUni(v.p) : "";
+      PropVariantClear(ref v);
+      return s ?? "";
+    } catch { return ""; }
+    finally { if (ps != null) Marshal.ReleaseComObject(ps); }
+  }
+
+  // Ventanas que aparecerian en la barra de tareas, de la mas reciente a la mas antigua.
+  static string Wins() {
+    List<IntPtr> list = new List<IntPtr>();
+    EnumWindows(delegate (IntPtr h, IntPtr l) {
+      if (!IsWindowVisible(h)) return true;
+      int ex = GetWindowLong(h, -20);
+      bool appw = (ex & 0x40000) != 0;
+      if (!appw && ((ex & 0x80) != 0 || (ex & 0x08000000) != 0 || GetWindow(h, 4) != IntPtr.Zero)) return true;
+      int cloaked = 0;
+      if (DwmGetWindowAttribute(h, 14, out cloaked, 4) == 0 && cloaked != 0) return true;
+      if (GetWindowTextLength(h) == 0) return true;
+      string c = ClassOf(h);
+      if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return true;
+      list.Add(h);
+      return true;
+    }, IntPtr.Zero);
+    HashSet<long> alive = new HashSet<long>();
+    StringBuilder b = new StringBuilder("[");
+    bool first = true;
+    foreach (IntPtr h in list) {
+      long k = h.ToInt64();
+      alive.Add(k);
+      WinInfo info;
+      if (!infos.TryGetValue(k, out info)) {
+        info = new WinInfo();
+        GetWindowThreadProcessId(h, out info.Pid);
+        info.Path = ProcPath(info.Pid);
+        info.Aumid = Aumid(h);
+        infos[k] = info;
+      }
+      if (info.Pid == parent) continue;
+      StringBuilder t = new StringBuilder(160);
+      GetWindowText(h, t, 160);
+      if (!first) b.Append(',');
+      first = false;
+      b.Append("{\"h\":" + k + ",\"p\":" + J(info.Path) + ",\"a\":" + J(info.Aumid) + ",\"t\":" + J(t.ToString()) + ",\"m\":" + (IsIconic(h) ? 1 : 0) + "}");
+    }
+    List<long> gone = new List<long>();
+    foreach (long k in infos.Keys) if (!alive.Contains(k)) gone.Add(k);
+    foreach (long k in gone) infos.Remove(k);
+    return b.Append(']').ToString();
+  }
+
+  // Reserva una franja junto al borde para que las ventanas maximizadas no queden debajo del dock.
+  static string Bar(IntPtr h, uint edge, int thick, RECT mon, bool force) {
+    APPBARDATA d = new APPBARDATA();
+    d.cbSize = Marshal.SizeOf(typeof(APPBARDATA));
+    d.hWnd = h;
+    d.uCallbackMessage = cbMsg;
+    long key = h.ToInt64();
+    if (force && bars.ContainsKey(key)) { SHAppBarMessage(1, ref d); bars.Remove(key); }
+    if (!bars.ContainsKey(key)) {
+      if (SHAppBarMessage(0, ref d) == UIntPtr.Zero) {
+        SHAppBarMessage(1, ref d);
+        if (SHAppBarMessage(0, ref d) == UIntPtr.Zero) return "fail";
+      }
+      bars[key] = edge;
+    }
+    d.uEdge = edge;
+    d.rc = mon;
+    if (edge == 0) d.rc.R = mon.L + thick;
+    else if (edge == 1) d.rc.B = mon.T + thick;
+    else if (edge == 2) d.rc.L = mon.R - thick;
+    else d.rc.T = mon.B - thick;
+    SHAppBarMessage(2, ref d);
+    if (edge == 0) d.rc.R = d.rc.L + thick;
+    else if (edge == 1) d.rc.B = d.rc.T + thick;
+    else if (edge == 2) d.rc.L = d.rc.R - thick;
+    else d.rc.T = d.rc.B - thick;
+    SHAppBarMessage(3, ref d);
+    bars[key] = edge;
+    return d.rc.L + "," + d.rc.T + "," + d.rc.R + "," + d.rc.B;
+  }
+
+  static void Unbar(IntPtr h) {
+    APPBARDATA d = new APPBARDATA();
+    d.cbSize = Marshal.SizeOf(typeof(APPBARDATA));
+    d.hWnd = h;
+    SHAppBarMessage(1, ref d);
+    bars.Remove(h.ToInt64());
+  }
+
+  static void Focus(IntPtr h) {
+    if (!IsWindow(h)) return;
+    if (IsIconic(h)) ShowWindow(h, 9);
+    if (SetForegroundWindow(h) && GetForegroundWindow() == h) return;
+    uint pid;
+    uint me = GetCurrentThreadId();
+    uint fg = GetWindowThreadProcessId(GetForegroundWindow(), out pid);
+    uint target = GetWindowThreadProcessId(h, out pid);
+    if (fg != 0 && fg != me) AttachThreadInput(me, fg, true);
+    if (target != 0 && target != me) AttachThreadInput(me, target, true);
+    BringWindowToTop(h);
+    SetForegroundWindow(h);
+    if (target != 0 && target != me) AttachThreadInput(me, target, false);
+    if (fg != 0 && fg != me) AttachThreadInput(me, fg, false);
+    if (GetForegroundWindow() != h) {
+      keybd_event(0x12, 0, 1, UIntPtr.Zero);
+      keybd_event(0x12, 0, 3, UIntPtr.Zero);
+      SetForegroundWindow(h);
+    }
+  }
+
+  static void Handle(string cmd) {
+    string[] a = cmd.Split(' ');
+    try {
+      IntPtr h = a.Length > 1 ? new IntPtr(long.Parse(a[1])) : IntPtr.Zero;
+      if ((a[0] == "bar" || a[0] == "rebar") && a.Length >= 8) {
+        RECT m = new RECT();
+        m.L = int.Parse(a[4]); m.T = int.Parse(a[5]); m.R = int.Parse(a[6]); m.B = int.Parse(a[7]);
+        Out("bar " + a[1] + " " + Bar(h, uint.Parse(a[2]), int.Parse(a[3]), m, a[0] == "rebar"));
+      } else if (a[0] == "unbar") Unbar(h);
+      else if (a[0] == "focus") Focus(h);
+      else if (a[0] == "min") ShowWindow(h, 6);
+      else if (a[0] == "wins") winsNow = true;
+    } catch (Exception e) {
+      Out("err " + J(cmd + ": " + e.Message));
+    }
+  }
+
+  public static void Run(int parentPid) {
+    try { SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch { }
+    parent = (uint)Math.Max(0, parentPid);
+    writer = new System.IO.StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false));
+    cbMsg = RegisterWindowMessage("LanzaderaAppBar");
+    Out("hello " + cbMsg + " " + RegisterWindowMessage("TaskbarCreated"));
+    Thread reader = new Thread(ReadLoop);
+    reader.IsBackground = true;
+    reader.Start();
+    string lastFg = null, lastWins = null;
+    int n = 0;
+    try {
+      while (true) {
+        string c;
+        while ((c = Next()) != null) {
+          if (c == "quit") return;
+          if (c.Length > 0) Handle(c);
+        }
+        string fg = Fg();
+        if (fg != lastFg) { lastFg = fg; Out("fg " + fg); }
+        if (n % 4 == 0 || winsNow) {
+          winsNow = false;
+          string w = Wins();
+          if (w != lastWins) { lastWins = w; Out("win " + w); }
+        }
+        if (parentPid > 0 && n % 8 == 0) {
+          try { Process.GetProcessById(parentPid).Dispose(); } catch { return; }
+        }
+        n++;
+        Thread.Sleep(250);
+      }
+    } finally {
+      foreach (long k in new List<long>(bars.Keys)) Unbar(new IntPtr(k));
+    }
   }
 }
 '@
   Add-Type -TypeDefinition $cs -IgnoreWarnings
-  [LzFg]::Init()
-  $last = ''
-  $n = 0
-  while ($true) {
-    $s = [LzFg]::State()
-    if ($s -ne $last) {
-      [Console]::Out.WriteLine($s)
-      [Console]::Out.Flush()
-      $last = $s
-    }
-    Start-Sleep -Milliseconds 700
-    $n++
-    if ($ParentPid -gt 0 -and ($n % 6) -eq 0) {
-      if (-not (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue)) { exit 0 }
-    }
-  }
+  [LzShell]::Run($ParentPid)
+  exit 0
 }
 
 Write-Error "Modo desconocido: $Mode"

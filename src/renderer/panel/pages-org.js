@@ -4,6 +4,7 @@ import { tileSVG, gradientColors, TILE_STYLES } from '../shared/tiles.js';
 import { iconHTML, fluentUrl } from '../shared/icon-view.js';
 import { P, api, ap, patch, activeWs } from './ctx.js';
 import { page, section, card, toggle, seg, button, toast, confirmDialog, gl } from './ui.js';
+import { windowPicks, planBlock } from './pages-plan.js';
 
 const CAT_DESIGN = {
   Imágenes: ['image', 'atardecer'],
@@ -219,7 +220,7 @@ export function organizerPage() {
 let step = 0;
 export function welcomePage() {
   const c = P.config;
-  const dots = () => h('div.steps-dots', [0, 1, 2, 3].map((i) => h('i' + (i === step ? '.on' : ''))));
+  const dots = () => h('div.steps-dots', [0, 1, 2, 3, 4].map((i) => h('i' + (i === step ? '.on' : ''))));
   const go = (n) => {
     step = n;
     P.rerender();
@@ -234,12 +235,12 @@ export function welcomePage() {
       ['layers', 'violeta', 'Espacios', 'Un dock para Trabajo, otro para Ocio…', '1f5c2-fe0f'],
       ['search', 'indigo', 'Buscador', 'Alt + Espacio: apps, archivos, ajustes y cuentas.', '1f50d'],
       ['wand-sparkles', 'menta', 'Ordena tu escritorio', 'Archivos sueltos a carpetas, con deshacer.', '1fa84'],
-      ['activity', 'atardecer', 'Monitor del PC', 'CPU, memoria, gráfica, red y disco en vivo.', '1f4c8'],
+      ['activity', 'atardecer', 'Monitor del PC', 'CPU, memoria, gráfica, red y disco en un panel del escritorio.', '1f4c8'],
     ];
     box.append(
       h('img.wlogo', { src: 'lanz://asset/icon.png', alt: '', onerror: (e) => (e.target.outerHTML = `<div class="wlogo">${T('rocket', 'aurora')}</div>`) }),
       h('h1', { text: '¡Hola! Soy Lanzadera' }),
-      h('p.lead', { text: 'Tu nuevo dock para Windows: una barra con tus programas, carpetas y archivos favoritos que crece cuando la tocas. Te ayudo a dejarla a tu gusto en tres pasos.' }),
+      h('p.lead', { text: 'Tu nuevo dock para Windows: una barra con tus programas, carpetas y archivos favoritos que crece cuando la tocas. Te ayudo a dejarla a tu gusto en cuatro pasos.' }),
       h('div.features', feats.map(([g, gr, t, d, c]) => h('div.feature', h('span.fi', { html: T(g, gr, c) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
       h('div.actions', button('Empezar', () => go(1), { primary: true, icon: 'arrow-right' })),
       dots()
@@ -262,10 +263,21 @@ export function welcomePage() {
       h('p.lead', { text: 'Elige un borde: lo verás moverse al instante. Puedes cambiarlo cuando quieras con clic derecho sobre el dock.' }),
       edges,
       modes,
+      h('h2.news-h', { text: 'Con ventanas abiertas, el dock…' }),
+      windowPicks(),
       h('div.actions', button('Atrás', () => go(0)), button('Siguiente', () => go(2), { primary: true, icon: 'arrow-right' })),
       dots()
     );
   } else if (step === 2) {
+    box.classList.add('news');
+    box.append(
+      h('h1', { text: 'Tus programas y accesos' }),
+      h('p.lead', { text: 'Primero lo que más usas y después tus accesos directos agrupados por tema. Revisa y aplica; puedes cambiar todo después.' }),
+      planBlock(),
+      h('div.actions', button('Atrás', () => go(1)), button('Siguiente', () => go(3), { primary: true, icon: 'arrow-right' })),
+      dots()
+    );
+  } else if (step === 3) {
     const ws = activeWs();
     const apps = ws.items.filter((i) => i.type === 'app').slice(0, 4);
     const demo = apps.length ? apps : [{ type: 'app', name: 'Programa', target: 'x' }];
@@ -287,16 +299,16 @@ export function welcomePage() {
       cmp,
       styles,
       h('div', { style: { marginTop: '16px' } }, seg([['system', 'Tema de Windows'], ['light', 'Claro'], ['dark', 'Oscuro']], c.appearance.theme, (v) => patch({ appearance: { theme: v } }))),
-      h('div.actions', button('Atrás', () => go(1)), button('Siguiente', () => go(3), { primary: true, icon: 'arrow-right' })),
+      h('div.actions', button('Atrás', () => go(2)), button('Siguiente', () => go(4), { primary: true, icon: 'arrow-right' })),
       dots()
     );
   } else {
     const tips = [
       ['search', 'indigo', 'Alt + Espacio', 'Abre el buscador desde cualquier lugar.', '2328-fe0f'],
-      ['mouse-pointer-2', 'oceano', 'Arrastra y suelta', 'Archivos o programas sobre el dock para fijarlos.', '1f4e5'],
+      ['layout-grid', 'oceano', 'Agrupa arrastrando', 'Suelta un icono sobre otro y mantenlo un momento.', '1f5c2-fe0f'],
       ['mouse-pointer-click', 'violeta', 'Clic derecho', 'Sobre el dock o un icono: todas las opciones.', '1f5b1-fe0f'],
-      ['layers', 'atardecer', 'Ctrl + Mayús + Alt + 1, 2, 3', 'Cambia de espacio de trabajo.', '1f5c2-fe0f'],
-      ['inbox', 'menta', 'Estante', 'Suelta archivos ahí para tenerlos a mano.', '1f9fa'],
+      ['circle-dot', 'menta', 'Programas abiertos', 'Un punto los marca; un clic vuelve a su ventana. Mayús + clic abre otra.', '1f7e2'],
+      ['activity', 'atardecer', 'Monitor del PC', 'Vive en el escritorio; muévelo a donde quieras.', '1f4c8'],
       ['wand-sparkles', 'aurora', 'Ordenar escritorio', 'Un clic y todo queda en su carpeta.', '1fa84'],
     ];
     box.append(
@@ -304,13 +316,13 @@ export function welcomePage() {
       h('p.lead', { text: 'Tu dock ya está funcionando. Algunos trucos para sacarle provecho:' }),
       h('div.features', tips.map(([g, gr, t, d, c]) => h('div.feature', h('span.fi', { html: T(g, gr, c) }), h('div', h('b', { text: t }), h('span', { text: d }))))),
       h('div.actions',
-        button('Atrás', () => go(2)),
+        button('Atrás', () => go(3)),
         button('Personalizar más', () => {
-          patch({ firstRun: false });
+          patch({ firstRun: false, seenVersion: P.env.version });
           P.navigate('/inicio');
         }),
         button('Empezar a usar', () => {
-          patch({ firstRun: false });
+          patch({ firstRun: false, seenVersion: P.env.version });
           api.closeWindow();
         }, { primary: true, icon: 'check' })
       ),

@@ -1,3 +1,11 @@
+## Novedades
+
+- **No tapa tus ventanas.** El dock reserva su franja como la barra de tareas: lo que maximices termina justo arriba. Si prefieres, puede esconderse cuando una ventana lo toca, o quedar encima como antes (clic derecho › Con ventanas abiertas).
+- **Métricas en el escritorio.** El monitor de rendimiento ahora es un panel del escritorio que puedes mover a donde quieras; la barra queda libre.
+- **Barra en dos zonas.** Primero tus programas más usados (según el uso real en Windows) y después tus grupos.
+- **Agrupa a tu manera.** Suelta un icono sobre otro y mantenlo un momento para crear un grupo, o usa clic derecho › Agrupar. También puedes armar grupos por tema con los accesos directos de tu escritorio (Configuración › Accesos y grupos).
+- **Programas abiertos.** Un punto marca lo que está abierto y un clic te lleva a su ventana. Mayús + clic abre otra.
+
 ## Cómo instalar
 
 1. Descarga **`Lanzadera-Setup-{{version}}.exe`** (más abajo, en *Assets*).

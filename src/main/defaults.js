@@ -1,13 +1,12 @@
 // Configuración inicial y dock de bienvenida armado con las apps encontradas en el equipo.
 const path = require('path');
-const crypto = require('crypto');
-
-const id = () => crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+const { newId: id } = require('./ids');
 
 function baseConfig() {
   return {
-    schema: 1,
+    schema: 2,
     firstRun: true,
+    seenVersion: '',
     appearance: {
       theme: 'system', // system | dark | light
       accent: 'system',
@@ -33,6 +32,7 @@ function baseConfig() {
       overTaskbar: false,
       margin: 10,
       idle: 'compact', // normal | compact | mini | hidden
+      windows: 'reserve', // reserve | dodge | top: qué hace con las ventanas abiertas
       showDelay: 120,
       hideDelay: 450,
     },
@@ -44,6 +44,7 @@ function baseConfig() {
       suggestions: true,
       fileSearch: true,
       hideInFullscreen: true,
+      focusRunning: true,
     },
     hotkeys: {
       search: 'Alt+Space',
@@ -53,7 +54,7 @@ function baseConfig() {
     },
     clipboard: { enabled: true, max: 40, persist: false },
     clock: { hour12: false, seconds: false },
-    monitor: { gadget: false, onTop: true, opacity: 0.96, bounds: null },
+    monitor: { gadget: true, onTop: false, opacity: 0.96, bounds: null },
     workspaces: [],
     activeWorkspace: null,
     shelf: [],
@@ -86,7 +87,37 @@ const group = (name, items, gradient, layout = 'grid') => ({
   icon: { kind: 'auto', gradient },
 });
 
-function windowsWorkspaces(apps, paths) {
+const keyOf = (it) => String(it.appId || it.target || it.name || '').toLowerCase();
+
+// Une zonas con separadores: favoritos | grupos | herramientas.
+function zones(...lists) {
+  const out = [];
+  for (const z of lists.map((l) => l.filter(Boolean))) {
+    if (!z.length) continue;
+    if (out.length) out.push(sep());
+    out.push(...z);
+  }
+  return out;
+}
+
+// Completa grupos con el mismo nombre o agrega grupos nuevos (p. ej. los accesos del escritorio).
+function mergeGroups(groups, extra) {
+  const out = groups.map((g) => ({ ...g, items: [...g.items] }));
+  for (const e of extra || []) {
+    const same = out.find((g) => g.name.toLowerCase() === e.name.toLowerCase());
+    const target = same || group(e.name, [], e.gradient);
+    const have = new Set(target.items.map(keyOf));
+    for (const it of e.items) {
+      if (have.has(keyOf(it))) continue;
+      have.add(keyOf(it));
+      target.items.push({ ...it, id: id() });
+    }
+    if (!same && target.items.length) out.push(target);
+  }
+  return out;
+}
+
+function windowsWorkspaces(apps, paths, { favorites = [], desktopGroups = [] } = {}) {
   const sysRoot = process.env.SystemRoot || 'C:\\Windows';
   const sys32 = path.join(sysRoot, 'System32');
   const A = (re) => findApp(apps, re);
@@ -108,70 +139,51 @@ function windowsWorkspaces(apps, paths) {
     { id: id(), type: 'app', name: 'Este equipo', target: 'shell:MyComputerFolder' },
     { id: id(), type: 'url', name: 'Configuración de Windows', target: 'ms-settings:' },
   ].filter(Boolean);
-
-  const officeGroup = office.length
-    ? group('Oficina', [...office.map((a) => appItem(a)), appItem(notepad)], 'indigo')
-    : group('Notas y documentos', [appItem(notepad), appItem(A(/^wordpad$/i))], 'indigo');
-
-  const principal = [
-    explorer,
-    browser(),
-    officeGroup.items.length ? officeGroup : null,
-    group('Herramientas', tools, 'grafito'),
-    sep(),
-    stack('Descargas', paths.downloads, 'fan'),
-    stack('Documentos', paths.documents, 'grid'),
-    { id: id(), type: 'recent', name: 'Recientes', layout: 'list' },
-    { id: id(), type: 'shelf', name: 'Estante' },
-    sep(),
-    widget('clock', 'Reloj'),
-    widget('cpu', 'Procesador'),
-    widget('ram', 'Memoria'),
-    widget('net', 'Red'),
-    widget('clipboard', 'Portapapeles'),
-    sep(),
-    action('search', 'Buscar'),
-    action('organize', 'Ordenar escritorio'),
-    action('workspaces', 'Espacios'),
-    action('trash', 'Papelera'),
-  ].filter(Boolean);
-
-  const trabajo = [
-    { ...explorer, id: id() },
-    browser(),
-    ...office.map((a) => appItem(a)),
-    appItem(notepad),
-    sep(),
-    stack('Documentos', paths.documents, 'grid'),
-    stack('Escritorio', paths.desktop, 'grid'),
-    { id: id(), type: 'recent', name: 'Recientes', layout: 'list' },
-    sep(),
-    widget('clock', 'Reloj'),
-    widget('notes', 'Notas'),
-    widget('clipboard', 'Portapapeles'),
-    sep(),
-    { id: id(), type: 'smart', name: 'Sugeridas', layout: 'grid' },
-    action('search', 'Buscar'),
-    action('workspaces', 'Espacios'),
-  ].filter(Boolean);
-
   const fun = [/spotify/i, /^steam$/i, /^xbox$/i, /discord/i, /whatsapp/i, /netflix/i, /^(fotos|photos|microsoft fotos)$/i, /reproductor multimedia|media player/i, /^epic games/i]
     .map(A)
     .filter(Boolean)
     .map((a) => appItem(a));
-  const ocio = [
-    browser(),
-    ...fun,
-    sep(),
-    stack('Música', paths.music, 'grid'),
-    stack('Videos', paths.videos, 'grid'),
-    stack('Imágenes', paths.pictures, 'grid'),
-    sep(),
-    widget('clock', 'Reloj'),
-    { id: id(), type: 'smart', name: 'Sugeridas', layout: 'grid' },
+
+  // Zona 1: lo que más usas (según Windows) o, si no se sabe, lo básico.
+  const favs = [explorer, browser()].filter(Boolean);
+  const seen = new Set(favs.map(keyOf));
+  const extra = favorites.length ? favorites : [office[0], office[1], notepad].filter(Boolean).map((a) => appItem(a));
+  for (const f of extra) {
+    if (favs.length >= 8 || !f || seen.has(keyOf(f))) continue;
+    seen.add(keyOf(f));
+    favs.push({ ...f, id: id() });
+  }
+
+  // Zona 2: grupos por tema, completados con los accesos directos del escritorio.
+  const officeGroup = office.length
+    ? group('Oficina', [...office.map((a) => appItem(a)), appItem(notepad)], 'indigo')
+    : group('Oficina', [appItem(notepad), appItem(A(/^wordpad$/i))], 'indigo');
+  const funGroup = fun.length > 1 ? group('Entretenimiento', fun, 'atardecer') : null;
+  const groups = mergeGroups([officeGroup, funGroup, group('Utilidades', tools, 'grafito')].filter((g) => g && g.items.length), desktopGroups);
+
+  // Zona 3: carpetas en vivo y herramientas de Lanzadera.
+  const principal = zones(favs, groups, [
+    stack('Descargas', paths.downloads, 'fan'),
+    stack('Documentos', paths.documents, 'grid'),
+    { id: id(), type: 'recent', name: 'Recientes', layout: 'list' },
+    { id: id(), type: 'shelf', name: 'Estante' },
+    widget('clipboard', 'Portapapeles'),
     action('search', 'Buscar'),
     action('workspaces', 'Espacios'),
-  ].filter(Boolean);
+    action('trash', 'Papelera'),
+  ]);
+
+  const trabajo = zones(
+    [{ ...explorer, id: id() }, browser(), ...office.map((a) => appItem(a)), appItem(notepad)],
+    [stack('Documentos', paths.documents, 'grid'), stack('Escritorio', paths.desktop, 'grid'), { id: id(), type: 'recent', name: 'Recientes', layout: 'list' }],
+    [widget('clock', 'Reloj'), widget('notes', 'Notas'), widget('clipboard', 'Portapapeles'), { id: id(), type: 'smart', name: 'Sugeridas', layout: 'grid' }, action('search', 'Buscar'), action('workspaces', 'Espacios')]
+  );
+
+  const ocio = zones(
+    [browser(), ...fun],
+    [stack('Música', paths.music, 'grid'), stack('Videos', paths.videos, 'grid'), stack('Imágenes', paths.pictures, 'grid')],
+    [{ id: id(), type: 'smart', name: 'Sugeridas', layout: 'grid' }, action('search', 'Buscar'), action('workspaces', 'Espacios')]
+  );
 
   return [
     { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano', fluent: '1f3e0' }, items: principal },
@@ -182,55 +194,50 @@ function windowsWorkspaces(apps, paths) {
 
 // Para desarrollo en Linux/macOS: elementos genéricos que existen en cualquier equipo.
 function genericWorkspaces(paths) {
-  const principal = [
-    { id: id(), type: 'folder', name: 'Carpeta personal', target: paths.home },
-    { id: id(), type: 'url', name: 'Navegador', target: 'https://www.google.com' },
-    group(
-      'Oficina',
-      [
-        { id: id(), type: 'url', name: 'Word', target: 'https://www.office.com/launch/word' },
-        { id: id(), type: 'url', name: 'Excel', target: 'https://www.office.com/launch/excel' },
-        { id: id(), type: 'url', name: 'PowerPoint', target: 'https://www.office.com/launch/powerpoint' },
-        { id: id(), type: 'url', name: 'Outlook', target: 'https://outlook.live.com' },
-        { id: id(), type: 'url', name: 'Bloc de notas', target: 'https://www.google.com/keep' },
-      ],
-      'indigo'
-    ),
-    group(
-      'Herramientas',
-      [
-        { id: id(), type: 'url', name: 'Calculadora', target: 'https://www.google.com/search?q=calculadora' },
-        { id: id(), type: 'url', name: 'Terminal', target: 'https://example.com' },
-        { id: id(), type: 'url', name: 'Configuración', target: 'https://example.com' },
-        { id: id(), type: 'url', name: 'Spotify', target: 'https://open.spotify.com' },
-      ],
-      'grafito'
-    ),
-    sep(),
-    stack('Descargas', paths.downloads, 'fan'),
-    stack('Documentos', paths.documents, 'grid'),
-    { id: id(), type: 'recent', name: 'Recientes', layout: 'list' },
-    { id: id(), type: 'shelf', name: 'Estante' },
-    sep(),
-    widget('clock', 'Reloj'),
-    widget('cpu', 'Procesador'),
-    widget('ram', 'Memoria'),
-    widget('net', 'Red'),
-    widget('clipboard', 'Portapapeles'),
-    sep(),
-    action('search', 'Buscar'),
-    action('organize', 'Ordenar escritorio'),
-    action('workspaces', 'Espacios'),
-    action('trash', 'Papelera'),
-  ];
+  const principal = zones(
+    [{ id: id(), type: 'folder', name: 'Carpeta personal', target: paths.home }, { id: id(), type: 'url', name: 'Navegador', target: 'https://www.google.com' }],
+    [
+      group(
+        'Oficina',
+        [
+          { id: id(), type: 'url', name: 'Word', target: 'https://www.office.com/launch/word' },
+          { id: id(), type: 'url', name: 'Excel', target: 'https://www.office.com/launch/excel' },
+          { id: id(), type: 'url', name: 'PowerPoint', target: 'https://www.office.com/launch/powerpoint' },
+          { id: id(), type: 'url', name: 'Outlook', target: 'https://outlook.live.com' },
+          { id: id(), type: 'url', name: 'Bloc de notas', target: 'https://www.google.com/keep' },
+        ],
+        'indigo'
+      ),
+      group(
+        'Utilidades',
+        [
+          { id: id(), type: 'url', name: 'Calculadora', target: 'https://www.google.com/search?q=calculadora' },
+          { id: id(), type: 'url', name: 'Terminal', target: 'https://example.com' },
+          { id: id(), type: 'url', name: 'Configuración', target: 'https://example.com' },
+          { id: id(), type: 'url', name: 'Spotify', target: 'https://open.spotify.com' },
+        ],
+        'grafito'
+      ),
+    ],
+    [
+      stack('Descargas', paths.downloads, 'fan'),
+      stack('Documentos', paths.documents, 'grid'),
+      { id: id(), type: 'recent', name: 'Recientes', layout: 'list' },
+      { id: id(), type: 'shelf', name: 'Estante' },
+      widget('clipboard', 'Portapapeles'),
+      action('search', 'Buscar'),
+      action('workspaces', 'Espacios'),
+      action('trash', 'Papelera'),
+    ]
+  );
   return [
     { id: id(), name: 'Principal', icon: { glyph: 'house', gradient: 'oceano', fluent: '1f3e0' }, items: principal },
     { id: id(), name: 'Trabajo', icon: { glyph: 'briefcase', gradient: 'violeta', fluent: '1f4bc' }, items: [widget('clock', 'Reloj'), action('search', 'Buscar'), action('workspaces', 'Espacios')] },
   ];
 }
 
-function buildWorkspaces({ apps, paths, platform }) {
-  return platform === 'win32' ? windowsWorkspaces(apps || [], paths) : genericWorkspaces(paths);
+function buildWorkspaces({ apps, paths, platform, favorites, desktopGroups }) {
+  return platform === 'win32' ? windowsWorkspaces(apps || [], paths, { favorites, desktopGroups }) : genericWorkspaces(paths);
 }
 
 module.exports = { baseConfig, buildWorkspaces, newId: id };

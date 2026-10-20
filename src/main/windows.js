@@ -2,6 +2,7 @@
 const { BrowserWindow, screen, nativeTheme } = require('electron');
 const os = require('os');
 const path = require('path');
+const { hwndOf } = require('./shell');
 
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
 const APP_URL = 'lanz://app';
@@ -38,8 +39,29 @@ function hardenWebContents(wc) {
   });
 }
 
-function dockBounds(display, pos) {
-  const area = pos.overTaskbar ? display.bounds : display.workArea;
+// Área donde vive el dock: el área de trabajo más la franja que el propio dock reservó
+// (al reservarla, Windows la descuenta del área de trabajo).
+function dockArea(display, pos, reserved) {
+  if (pos.overTaskbar) return display.bounds;
+  const wa = display.workArea;
+  const r = reserved && reserved.edge === pos.edge ? reserved : null;
+  if (!r) return wa;
+  const right = (a) => a.x + a.width;
+  const bottom = (a) => a.y + a.height;
+  if (pos.edge === 'bottom') return { x: wa.x, y: wa.y, width: wa.width, height: Math.max(bottom(wa), bottom(r)) - wa.y };
+  if (pos.edge === 'top') {
+    const top = Math.min(wa.y, r.y);
+    return { x: wa.x, y: top, width: wa.width, height: bottom(wa) - top };
+  }
+  if (pos.edge === 'left') {
+    const left = Math.min(wa.x, r.x);
+    return { x: left, y: wa.y, width: right(wa) - left, height: wa.height };
+  }
+  return { x: wa.x, y: wa.y, width: Math.max(right(wa), right(r)) - wa.x, height: wa.height };
+}
+
+function dockBounds(display, pos, reserved = null) {
+  const area = dockArea(display, pos, reserved);
   const vertical = pos.edge === 'left' || pos.edge === 'right';
   if (vertical) {
     const T = Math.round(Math.min(680, area.width * 0.6));
@@ -49,12 +71,41 @@ function dockBounds(display, pos) {
   return { x: area.x, y: pos.edge === 'top' ? area.y : area.y + area.height - T, width: area.width, height: T };
 }
 
+function intersects(a, b, inset = 0) {
+  return a.x + inset < b.x + b.width && b.x < a.x + a.width - inset && a.y + inset < b.y + b.height && b.y < a.y + a.height - inset;
+}
+
+// Con ventanas abiertas, el dock puede: reservar su franja (las ventanas maximizadas terminan
+// antes), esconderse cuando la ventana activa lo toca, o quedar encima de todo.
 class DockManager {
-  constructor(store) {
+  constructor(store, shell = null) {
     this.store = store;
+    this.shell = shell;
     this.wins = new Map();
     this.hidden = false;
     this.fullscreenDisplay = null;
+    this.quietUntil = 0;
+    if (shell) {
+      shell.on('appbar', (e) => this.onAppBar(e));
+      shell.on('foreground', (fg) => this.onForeground(fg));
+      shell.on('ready', () => {
+        for (const w of this.all()) {
+          this.hook(w);
+          if (w.lz.reserveKey) w.lz.reserveKey = null;
+        }
+        this.applyWindowsMode();
+      });
+      shell.on('exit', () => {
+        for (const w of this.all()) Object.assign(w.lz, { reserved: null, reserveKey: null });
+        this.sync();
+      });
+    }
+  }
+
+  windowsMode() {
+    const m = this.store.get().position.windows;
+    if (process.platform !== 'win32' || !this.shell) return 'top';
+    return m;
   }
 
   // Un programa en pantalla completa esconde el dock de esa pantalla.
@@ -86,6 +137,7 @@ class DockManager {
     const ids = new Set(displays.map((d) => String(d.id)));
     for (const [id, win] of this.wins) {
       if (!ids.has(id)) {
+        this.unreserve(win);
         win.destroy();
         this.wins.delete(id);
       }
@@ -97,11 +149,21 @@ class DockManager {
         win = this.create(d);
         this.wins.set(id, win);
       }
-      const b = dockBounds(d, this.store.get().position);
-      const cur = win.getBounds();
-      if (cur.x !== b.x || cur.y !== b.y || cur.width !== b.width || cur.height !== b.height) win.setBounds(b);
       win.displayId = id;
+      this.place(win, d);
     }
+    this.applyWindowsMode();
+  }
+
+  place(win, display = this.displayOf(win)) {
+    if (!display || win.isDestroyed()) return;
+    const b = dockBounds(display, this.store.get().position, win.lz.reserved);
+    const cur = win.getBounds();
+    if (cur.x !== b.x || cur.y !== b.y || cur.width !== b.width || cur.height !== b.height) win.setBounds(b);
+  }
+
+  displayOf(win) {
+    return screen.getAllDisplays().find((d) => String(d.id) === win.displayId) || null;
   }
 
   create(display) {
@@ -124,18 +186,111 @@ class DockManager {
       type: process.platform === 'win32' ? 'toolbar' : undefined,
       webPreferences: webPrefs(),
     });
+    win.lz = { bar: null, reserved: null, reserveKey: null, dodged: false };
+    win.displayId = String(display.id);
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setIgnoreMouseEvents(true, { forward: true });
     if (process.platform !== 'win32') win.setVisibleOnAllWorkspaces?.(true);
     hardenWebContents(win.webContents);
     win.loadURL(`${APP_URL}/dock/index.html`);
     win.once('ready-to-show', () => {
-      if (!this.hidden && String(display.id) !== this.fullscreenDisplay) win.showInactive();
+      if (!this.hidden && win.displayId !== this.fullscreenDisplay) win.showInactive();
+    });
+    win.webContents.on('did-finish-load', () => {
+      if (win.lz.dodged) win.webContents.send('dock:dodge', true);
     });
     win.on('closed', () => {
       for (const [id, w] of this.wins) if (w === win) this.wins.delete(id);
     });
+    this.hook(win);
     return win;
+  }
+
+  // Avisos del shell de Windows: otra barra o la barra de tareas cambiaron de lugar, o el
+  // Explorador se reinició y olvidó la franja reservada.
+  hook(win) {
+    const ids = this.shell?.msgIds;
+    if (!ids || win.lz.hooked || process.platform !== 'win32') return;
+    win.lz.hooked = true;
+    try {
+      win.hookWindowMessage(ids.appbar, (wParam) => {
+        if (wParam?.readUInt32LE?.(0) !== 1 || Date.now() < this.quietUntil) return;
+        clearTimeout(win.lz.reassert);
+        win.lz.reassert = setTimeout(() => this.reserve(win, true), 500);
+      });
+      win.hookWindowMessage(ids.taskbarCreated, () => setTimeout(() => this.reserve(win, true), 1500));
+    } catch {}
+  }
+
+  applyWindowsMode() {
+    const mode = this.windowsMode();
+    for (const w of this.all()) {
+      if (mode === 'reserve' && !this.hidden) this.reserve(w);
+      else this.unreserve(w);
+      if (mode !== 'dodge') this.setDodged(w, false);
+    }
+    if (mode === 'dodge' && this.shell?.fg) this.onForeground(this.shell.fg);
+  }
+
+  // La interfaz del dock informa dónde queda la barra en reposo.
+  setBar(win, info) {
+    if (!win || win.isDestroyed() || !win.lz || !info) return;
+    const n = (v) => (Number.isFinite(v) ? Math.round(v) : 0);
+    win.lz.bar = { thickness: n(info.thickness), rect: { x: n(info.x), y: n(info.y), width: n(info.width), height: n(info.height) } };
+    if (this.windowsMode() === 'reserve' && !this.hidden) this.reserve(win);
+    else if (this.windowsMode() === 'dodge' && this.shell?.fg) this.onForeground(this.shell.fg);
+  }
+
+  reserve(win, force = false) {
+    if (!this.shell?.alive || !win?.lz?.bar || win.isDestroyed()) return;
+    const pos = this.store.get().position;
+    const display = this.displayOf(win);
+    if (!display) return;
+    const t = win.lz.bar.thickness;
+    if (pos.overTaskbar || t <= 0) return this.unreserve(win);
+    const key = `${pos.edge}|${t}|${JSON.stringify(display.bounds)}|${display.scaleFactor}`;
+    if (!force && key === win.lz.reserveKey) return;
+    win.lz.reserveKey = key;
+    win.lz.pendingEdge = pos.edge;
+    this.quietUntil = Date.now() + 1500;
+    this.shell.setAppBar(win, pos.edge, t + 2, display, force);
+  }
+
+  // Al soltar la franja, Windows agranda el área de trabajo y el dock se reacomoda solo
+  // (evento display-metrics-changed); moverlo antes lo haría saltar.
+  unreserve(win) {
+    if (!win?.lz || win.isDestroyed() || (!win.lz.reserveKey && !win.lz.reserved)) return;
+    this.shell?.removeAppBar(win);
+    win.lz.reserveKey = null;
+    win.lz.reserved = null;
+    if (!this.shell?.alive) this.place(win);
+  }
+
+  onAppBar({ hwnd, rect }) {
+    const win = this.all().find((w) => hwndOf(w) === hwnd);
+    if (!win) return;
+    win.lz.reserved = rect ? { ...rect, edge: win.lz.pendingEdge } : null;
+    win.lz.reserveFailed = !rect;
+    this.place(win);
+  }
+
+  onForeground(fg) {
+    if (this.windowsMode() !== 'dodge' || !fg || fg.own || fg.shell) return;
+    for (const w of this.all()) {
+      let dodge = false;
+      const bar = w.lz.bar?.rect;
+      if (!fg.desk && !fg.min && fg.rect && bar && bar.width && bar.height) {
+        const b = w.getBounds();
+        dodge = intersects(fg.rect, { x: b.x + bar.x, y: b.y + bar.y, width: bar.width, height: bar.height }, 8);
+      }
+      this.setDodged(w, dodge);
+    }
+  }
+
+  setDodged(win, v) {
+    if (!win.lz || win.lz.dodged === v) return;
+    win.lz.dodged = v;
+    if (!win.webContents.isLoading()) win.webContents.send('dock:dodge', v);
   }
 
   all() {
@@ -145,6 +300,12 @@ class DockManager {
   toggle(force) {
     this.hidden = force === undefined ? !this.hidden : !force;
     this.applyVisibility();
+    this.applyWindowsMode();
+  }
+
+  // Quita las franjas reservadas al salir, para devolver el espacio a las ventanas.
+  releaseAll() {
+    for (const w of this.all()) this.unreserve(w);
   }
 
   setInteractive(win, interactive) {
@@ -359,4 +520,4 @@ class MonitorWindows {
   }
 }
 
-module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica };
+module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica, dockArea, dockBounds, intersects };

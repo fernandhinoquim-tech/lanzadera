@@ -46,6 +46,35 @@ async function moveOutOfGroup(id) {
   await saveItems(items);
 }
 
+// Mueve un elemento a un grupo existente o arma uno nuevo con él.
+async function moveToGroup(id, groupId) {
+  const items = clone(S.ws.items);
+  const f = findItem(id, items);
+  if (!f) return;
+  if (f.parent) f.parent.items = f.parent.items.filter((k) => k.id !== id);
+  const rest = items.filter((i) => i.id !== id);
+  const g = rest.find((i) => i.id === groupId);
+  if (!g) return;
+  g.items = [...(g.items || []), f.item];
+  await saveItems(rest);
+  toast(`Movido al grupo «${g.name}»`);
+}
+
+async function newGroupWith(id) {
+  const items = clone(S.ws.items);
+  const idx = items.findIndex((i) => i.id === id);
+  if (idx < 0) return;
+  let name = 'Mis accesos';
+  try {
+    const [c] = await api.categorize([items[idx]]);
+    if (c && !['Otros', 'Sitios web', 'Carpetas'].includes(c)) name = c;
+  } catch {}
+  const g = { id: uid(), type: 'group', name, layout: 'grid', items: [items[idx]], icon: { kind: 'auto' } };
+  items[idx] = g;
+  await saveItems(items);
+  toast(`Grupo «${name}» creado: arrastra más iconos encima`, { action: { label: 'Renombrar', fn: () => api.openPanel(`/elementos?id=${g.id}`) } });
+}
+
 async function moveToWorkspace(id, wsId) {
   const f = findItem(id);
   if (!f) return;
@@ -64,6 +93,7 @@ export function itemMenu(item, parent, x, y) {
 
   if (isLaunchable) {
     entries.push({ label: 'Abrir', icon: 'external-link', onClick: () => launchItem(item) });
+    if (S.running.has(item.id)) entries.push({ label: 'Abrir otra ventana', icon: 'copy-plus', hint: 'Mayús+clic', onClick: () => launchItem(item, { newInstance: true }) });
     if (item.type === 'app' && S.state.env.platform === 'win32' && (item.target || item.appId))
       entries.push({ label: 'Ejecutar como administrador', icon: 'shield', hint: 'Ctrl+Mayús+clic', onClick: () => launchItem(item, { admin: true }) });
     if (hasPath(item)) entries.push({ label: 'Abrir ubicación del archivo', icon: 'folder-search', onClick: () => api.reveal(item.target).catch((e) => toast(e.message, { error: true })) });
@@ -117,6 +147,17 @@ export function itemMenu(item, parent, x, y) {
       entries.push({ label: 'Cambiar icono…', icon: 'palette', onClick: () => api.openPanel(`/iconos?id=${item.id}`) });
     }
     if (parent) entries.push({ label: 'Sacar del grupo', icon: 'log-out', onClick: () => moveOutOfGroup(item.id) });
+    if (isLaunchable) {
+      const groups = S.ws.items.filter((i) => i.type === 'group' && i.id !== parent?.id);
+      entries.push({
+        label: parent ? 'Mover a otro grupo' : 'Agrupar',
+        icon: 'layout-grid',
+        submenu: [
+          ...groups.map((g) => ({ label: g.name, onClick: () => moveToGroup(item.id, g.id) })),
+          ...(parent ? [] : [groups.length ? '-' : null, { label: 'Nuevo grupo con este', icon: 'plus', onClick: () => newGroupWith(item.id) }]),
+        ].filter(Boolean),
+      });
+    }
     if (others.length && item.type !== 'separator')
       entries.push({ label: 'Copiar a otro espacio', icon: 'layers', submenu: others.map((w) => ({ label: w.name, onClick: () => moveToWorkspace(item.id, w.id) })) });
     entries.push('-');
@@ -212,6 +253,15 @@ export function dockMenu(x, y, index = null) {
       ].map(([v, l]) => ({ label: l, checked: pos.idle === v, onClick: () => set({ position: { idle: v } }) })),
     },
     {
+      label: 'Con ventanas abiertas',
+      icon: 'app-window',
+      submenu: [
+        ['reserve', 'Reservar su espacio (no las tapa)'],
+        ['dodge', 'Esconderse si una ventana lo toca'],
+        ['top', 'Quedar encima de todo'],
+      ].map(([v, l]) => ({ label: l, checked: pos.windows === v, onClick: () => set({ position: { windows: v } }) })),
+    },
+    {
       label: 'Tamaño',
       icon: 'scaling',
       submenu: [
@@ -225,6 +275,15 @@ export function dockMenu(x, y, index = null) {
       label: 'Espacio de trabajo',
       icon: 'layers',
       submenu: S.config.workspaces.map((w) => ({ label: w.name, checked: w.id === S.config.activeWorkspace, onClick: () => set({ activeWorkspace: w.id }) })),
+    },
+    {
+      label: 'Organizar',
+      icon: 'wand-sparkles',
+      submenu: [
+        { label: 'Ordenar en dos zonas: favoritos | grupos', icon: 'columns-2', onClick: () => api.planApply(S.ws.id, { arrange: true }).then(() => toast('Barra ordenada en dos zonas')) },
+        { label: 'Agrupar mis accesos del escritorio…', icon: 'layout-grid', onClick: () => api.openPanel('/accesos') },
+        { label: 'Poner mis programas más usados…', icon: 'star', onClick: () => api.openPanel('/accesos') },
+      ],
     },
     { label: S.config.behavior.locked ? 'Desbloquear elementos' : 'Bloquear elementos', icon: S.config.behavior.locked ? 'lock-open' : 'lock', onClick: () => set({ behavior: { locked: !S.config.behavior.locked } }) },
     '-',
@@ -249,7 +308,7 @@ export async function activate(item, el, ev = {}) {
         setTimeout(() => el.classList.remove('bounce'), 950);
       }
       closePopup();
-      return launchItem(item, { admin: ev.ctrlKey && ev.shiftKey });
+      return launchItem(item, { admin: ev.ctrlKey && ev.shiftKey, newInstance: ev.shiftKey && !ev.ctrlKey });
     }
     case 'separator':
       return;

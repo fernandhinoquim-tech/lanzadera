@@ -7,36 +7,11 @@ const crypto = require('crypto');
 const { launch, showDesktop, lockComputer } = require('./launcher');
 const { listFolder, listRecent } = require('./folders');
 const { stats } = require('./system');
+const { describePaths } = require('./describe');
+const dockplan = require('./dockplan');
+const { categoryOf } = require('./categories');
 
 const ICON_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp', 'avif'];
-
-async function describePaths(paths) {
-  const out = await Promise.all(
-    (paths || []).map(async (p) => {
-      if (typeof p !== 'string' || !p) return null;
-      let st;
-      try {
-        st = await fsp.stat(p);
-      } catch {
-        return null;
-      }
-      const base = path.basename(p);
-      const ext = path.extname(p).toLowerCase();
-      const pretty = (s) => s.replace(/\.[^.]+$/, '').replace(/^./, (c) => c.toUpperCase());
-      if (st.isDirectory()) return { type: 'folder', name: base || p, target: p };
-      if (ext === '.lnk') return { type: 'app', name: base.slice(0, -4), target: p };
-      if (ext === '.url') {
-        try {
-          const m = /^URL=(.+)$/im.exec(await fsp.readFile(p, 'utf8'));
-          if (m) return { type: 'url', name: base.slice(0, -4), target: m[1].trim() };
-        } catch {}
-      }
-      if (['.exe', '.bat', '.cmd', '.msc', '.appref-ms', '.com'].includes(ext)) return { type: 'app', name: pretty(base), target: p };
-      return { type: 'file', name: base, target: p };
-    })
-  );
-  return out.filter(Boolean);
-}
 
 function uniqueDest(dir, name) {
   const ext = path.extname(name);
@@ -66,11 +41,18 @@ function register(ctx) {
   handle('items:set', (e, wsId, items) => store.setItems(wsId, items));
 
   // Abrir elementos
-  handle('item:launch', async (e, item, opts) => {
+  handle('item:launch', async (e, item, opts = {}) => {
+    // Un programa ya abierto vuelve al frente en vez de abrir otra copia (Mayús + clic abre otra).
+    const focusRunning = store.get().behavior.focusRunning !== false;
+    if (focusRunning && !opts?.newInstance && !opts?.admin && ctx.running?.activate(item)) {
+      usage.record(item);
+      return true;
+    }
     await launch(item, opts || {});
     usage.record(item);
     return true;
   });
+  handle('running:get', () => ctx.running?.ids || []);
   handle('item:launchMany', async (e, items) => {
     const errors = [];
     for (const it of items || []) {
@@ -206,6 +188,28 @@ function register(ctx) {
   });
   handle('stats:suggest', () => usage.suggest(10));
 
+  // Barra en dos zonas, programas más usados y grupos con los accesos del escritorio
+  handle('plan:preview', async () => {
+    const list = await apps.list().catch(() => []);
+    const [used, desk] = await Promise.all([dockplan.mostUsed({ apps: list, usage, n: 6 }), dockplan.desktopGroups(ctx.paths)]);
+    return { mostUsed: used, desktop: desk };
+  });
+  handle('plan:apply', async (e, wsId, opts = {}) => {
+    const ws = store.get().workspaces.find((w) => w.id === wsId) || store.activeWorkspace();
+    if (!ws) throw new Error('No hay espacio de trabajo');
+    let favorites = [];
+    let groups = [];
+    if (opts.favorites) {
+      const list = await apps.list().catch(() => []);
+      favorites = (await dockplan.mostUsed({ apps: list, usage, n: 6 })).items;
+    }
+    if (opts.desktop) groups = (await dockplan.desktopGroups(ctx.paths)).groups;
+    const res = dockplan.placeInZones(ws.items, { favorites, groups, arrange: opts.arrange !== false });
+    store.setItems(ws.id, res.items);
+    return { added: res.added, groups: res.groups };
+  });
+  handle('items:categorize', (e, items) => (Array.isArray(items) ? items : []).map((it) => categoryOf(it).name));
+
   // Iconos personalizados
   const importIcons = async (paths) => {
     await fsp.mkdir(customDir, { recursive: true });
@@ -276,6 +280,7 @@ function register(ctx) {
 
   // Ventanas
   ipcMain.on('dock:interactive', (e, v) => docks.setInteractive(BrowserWindow.fromWebContents(e.sender), !!v));
+  ipcMain.on('dock:bar', (e, info) => docks.setBar(BrowserWindow.fromWebContents(e.sender), info));
   ipcMain.on('dock:raise', (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);
     if (w && !w.isDestroyed()) w.moveTop();

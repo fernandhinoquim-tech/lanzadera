@@ -94,11 +94,31 @@ function sanitizeConfig(c) {
   if (!['bottom', 'top', 'left', 'right'].includes(pos.edge)) pos.edge = 'bottom';
   if (!['start', 'center', 'end'].includes(pos.align)) pos.align = 'center';
   if (!['normal', 'compact', 'mini', 'hidden'].includes(pos.idle)) pos.idle = 'compact';
+  if (!['reserve', 'dodge', 'top'].includes(pos.windows)) pos.windows = 'reserve';
   pos.margin = Math.max(0, Math.min(80, Number(pos.margin) || 0));
   c.clipboard.max = Math.max(5, Math.min(200, Number(c.clipboard.max) || 40));
   const b = c.monitor.bounds;
   if (b && !(Number.isFinite(b.x) && Number.isFinite(b.y))) c.monitor.bounds = null;
   c.monitor.opacity = Math.max(0.4, Math.min(1, Number(c.monitor.opacity) || 0.96));
+  if (typeof c.seenVersion !== 'string') c.seenVersion = '';
+  return c;
+}
+
+const METRIC_WIDGETS = new Set(['cpu', 'ram', 'gpu', 'net', 'disk', 'system']);
+
+// Cambios de formato entre versiones de la configuración guardada.
+function migrate(c) {
+  const from = Number(c.schema) || 1;
+  if (from < 2) {
+    // 1.1: las métricas pasan de la barra a un monitor en el escritorio.
+    for (const ws of c.workspaces) {
+      ws.items = ws.items.filter((i) => !(i.type === 'widget' && METRIC_WIDGETS.has(i.widget)));
+      ws.items = ws.items.filter((i, n, all) => i.type !== 'separator' || (n > 0 && n < all.length - 1 && all[n - 1].type !== 'separator'));
+    }
+    c.monitor.gadget = true;
+    c.monitor.onTop = false;
+  }
+  c.schema = 2;
   return c;
 }
 
@@ -115,6 +135,7 @@ class ConfigStore extends EventEmitter {
     const raw = readJSON(this.file, null);
     this.isNew = !raw;
     this.data = sanitizeConfig(deepMerge(baseConfig(), raw || {}));
+    if (raw) this.data = migrate(this.data);
     return this.data;
   }
 
@@ -139,7 +160,7 @@ class ConfigStore extends EventEmitter {
   }
 
   replace(data) {
-    this.data = sanitizeConfig(deepMerge(baseConfig(), data || {}));
+    this.data = migrate(sanitizeConfig(deepMerge(baseConfig(), data || {})));
     this.changed();
   }
 
@@ -168,4 +189,4 @@ class ConfigStore extends EventEmitter {
   }
 }
 
-module.exports = { ConfigStore, deepMerge, sanitizeItems, sanitizeConfig };
+module.exports = { ConfigStore, deepMerge, sanitizeItems, sanitizeConfig, migrate };

@@ -22,7 +22,10 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | 🔍 | **Efecto lupa** | Los iconos crecen al pasar el mouse. En modo *compacto* la barra es pequeña y se agranda al tocarla. |
 | 📍 | **Cualquier borde** | Abajo, arriba, izquierda o derecha; alineada al inicio, centro o final; en una o en todas las pantallas. |
 | 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color) u oculta (aparece al llevar el mouse al borde). |
-| 🗂️ | **Grupos** | Un icono que abre muchos más, en **abanico**, **cuadrícula** o **lista**. «Abrir todo» lanza el grupo completo. |
+| 🪟 | **No tapa tus ventanas** | Reserva su franja como la barra de tareas: las ventanas maximizadas terminan justo arriba. También puede esconderse cuando una ventana lo toca, o quedar encima de todo. |
+| ⭐ | **Barra en dos zonas** | Primero tus programas más usados (según el uso real en Windows) y después tus grupos de accesos directos. |
+| 🗂️ | **Grupos** | Un icono que abre muchos más, en **abanico**, **cuadrícula** o **lista**. Suelta un icono sobre otro para crear uno, o arma grupos por tema con los accesos de tu escritorio. «Abrir todo» lanza el grupo completo. |
+| 🟢 | **Programas abiertos** | Un punto marca lo que está abierto; un clic vuelve a su ventana (o la minimiza si ya estaba al frente). `Mayús + clic` abre otra. |
 | 📥 | **Carpetas en vivo** | Descargas, Documentos o cualquier carpeta, con miniaturas y un contador de archivos nuevos. |
 | 🕘 | **Recientes** | Los últimos archivos que abriste en Windows. |
 | 🧺 | **Estante** | Suelta archivos ahí para tenerlos a mano; luego arrástralos a otra carpeta, correo o programa. |
@@ -31,7 +34,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | ✨ | **Ordenar escritorio** | Acomoda los archivos sueltos en carpetas por tipo (Imágenes, PDF, Música…). Muestra una vista previa y **siempre se puede deshacer**. |
 | 🎨 | **Iconos 3D** | 1.238 iconos 3D al estilo de Windows 11 (Fluent de Microsoft) con buscador en español, como objeto libre o sobre mosaico. |
 | ✏️ | **Iconos de línea** | Banco de 1.850 iconos con 7 estilos (Degradado, Brillante 3D, Vidrio, Neón, Pastel, Sólido, Mínimo), 19 degradados, colores propios, emoji, letras, o **tus propias imágenes**. |
-| 📈 | **Monitor de rendimiento** | Widgets con gráfica en vivo (CPU, RAM, gráfica, red, disco), panel completo con núcleos, velocidad real, temperatura, memoria de video, unidades, batería y programas que más consumen, y un **monitor flotante** para el escritorio. |
+| 📈 | **Monitor de rendimiento** | Un panel en el escritorio con gráficas en vivo (CPU, RAM, gráfica, red, disco) y un monitor completo con núcleos, velocidad real, temperatura, memoria de video, unidades, batería y programas que más consumen. Si quieres, también como widgets en la barra. |
 | 🖼️ | **Iconos originales en HD** | Los iconos de tus programas se extraen de Windows a 256 px para que se vean nítidos al agrandarse. |
 | ⏰ | **Widgets** | Reloj con calendario, historial del portapapeles y notas rápidas. |
 | 🤖 | **Sugerencias** | El icono «Sugeridas» aprende qué programas usas a cada hora. |
@@ -48,6 +51,8 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | Clic derecho | Menú con todas las opciones (sobre el dock o un icono) |
 | `Ctrl + Mayús + clic` | Abrir un programa como administrador |
 | Arrastrar un icono fuera del dock | Quitarlo (con «Deshacer») |
+| Soltar un icono sobre otro (y esperar) | Crear un grupo con los dos |
+| `Mayús + clic` o clic central | Abrir otra ventana de un programa ya abierto |
 
 Todos los atajos se pueden cambiar en **Configuración → Comportamiento**.
 
@@ -55,6 +60,7 @@ Todos los atajos se pueden cambiar en **Configuración → Comportamiento**.
 
 - Todo se guarda **solo en tu equipo** (`%APPDATA%\Lanzadera`).
 - El historial del portapapeles vive en memoria y respeta a los gestores de contraseñas que piden no ser registrados. Puedes apagarlo en **Widgets**.
+- Para proponerte tus programas más usados, Lanzadera lee el registro de uso que Windows guarda en tu equipo; ese dato no sale de tu PC.
 - Lanzadera solo se conecta a Internet para buscar actualizaciones en este repositorio.
 
 ## Para desarrolladores

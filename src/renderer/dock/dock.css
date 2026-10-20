@@ -344,13 +344,38 @@ body {
   background: var(--accent);
 }
 
+/* Punto de programa abierto */
 .dot {
   position: absolute;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: currentColor;
-  opacity: 0.7;
+  opacity: 0.75;
+  display: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.item.running .dot {
+  display: block;
+}
+.rdot {
+  display: none;
+  position: absolute;
+  left: calc(50% - 2.5px);
+  bottom: -5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text);
+  opacity: 0.6;
+}
+.row .rdot {
+  left: -7px;
+  bottom: calc(50% - 2.5px);
+}
+.running > .cico .rdot,
+.running > .rico .rdot {
+  display: block;
 }
 .edge-bottom .dot {
   bottom: calc(var(--pad) * -0.75);

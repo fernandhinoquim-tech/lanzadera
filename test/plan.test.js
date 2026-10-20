@@ -70,6 +70,14 @@ test('agrega favoritos y grupos sin duplicar y completando grupos con el mismo n
   assert.equal(new Set(ids).size, ids.length, 'los ids no se repiten');
 });
 
+test('los grupos no repiten lo que ya está en la primera zona', () => {
+  const res = placeInZones([app('Google Chrome', { appId: 'Chrome' })], {
+    groups: [{ name: 'Internet', items: [app('Google Chrome', { target: 'C:\\D\\Google Chrome.lnk' }), app('Firefox')] }],
+  });
+  assert.deepEqual(kinds(res.items), ['Google Chrome', '|', '[Internet]']);
+  assert.deepEqual(res.items[2].items.map((i) => i.name), ['Firefox']);
+});
+
 test('sin reordenar, los grupos nuevos van después del último grupo', () => {
   const items = [app('A'), { id: 'g', type: 'group', name: 'G', items: [] }, { id: 'w', type: 'widget', widget: 'clock' }];
   const res = placeInZones(items, { favorites: [app('B')], groups: [{ name: 'Juegos', items: [app('Steam')] }], arrange: false });

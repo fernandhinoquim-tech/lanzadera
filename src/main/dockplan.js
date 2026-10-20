@@ -66,14 +66,18 @@ function placeInZones(items, { favorites = [], groups = [], arrange = true } = {
     favKeys.add(k);
     newFavs.push(withIds(f));
   }
+  // Lo que ya está en la primera zona no se repite dentro de los grupos.
+  const favNames = new Set([...list.filter((i) => LAUNCHABLE.has(i.type)), ...newFavs].map((i) => String(i.name || '').toLowerCase()));
+  const free = (k) => !favKeys.has(itemKey(k)) && !favNames.has(String(k.name || '').toLowerCase());
   const newGroups = [];
   for (const g of groups) {
+    const items = g.items.filter(free);
     const same = list.find((i) => i.type === 'group' && i.name.toLowerCase() === g.name.toLowerCase());
     if (same) {
       const have = keysIn(same.items || []);
-      same.items = [...(same.items || []), ...g.items.filter((k) => !have.has(itemKey(k))).map(withIds)];
-    } else if (g.items.length) {
-      newGroups.push(withIds({ type: 'group', name: g.name, layout: 'grid', items: g.items, icon: { kind: 'auto', gradient: g.gradient } }));
+      same.items = [...(same.items || []), ...items.filter((k) => !have.has(itemKey(k))).map(withIds)];
+    } else if (items.length) {
+      newGroups.push(withIds({ type: 'group', name: g.name, layout: 'grid', items, icon: { kind: 'auto', gradient: g.gradient } }));
     }
   }
   if (arrange) {

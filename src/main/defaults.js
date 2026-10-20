@@ -101,20 +101,23 @@ function zones(...lists) {
 }
 
 // Completa grupos con el mismo nombre o agrega grupos nuevos (p. ej. los accesos del escritorio).
-function mergeGroups(groups, extra) {
-  const out = groups.map((g) => ({ ...g, items: [...g.items] }));
+// Lo que ya está en la primera zona no se repite dentro de los grupos.
+function mergeGroups(groups, extra, favorites = []) {
+  const taken = new Set(favorites.flatMap((f) => [keyOf(f), 'n:' + String(f.name || '').toLowerCase()]));
+  const free = (it) => !taken.has(keyOf(it)) && !taken.has('n:' + String(it.name || '').toLowerCase());
+  const out = groups.map((g) => ({ ...g, items: g.items.filter(free) }));
   for (const e of extra || []) {
     const same = out.find((g) => g.name.toLowerCase() === e.name.toLowerCase());
     const target = same || group(e.name, [], e.gradient);
     const have = new Set(target.items.map(keyOf));
     for (const it of e.items) {
-      if (have.has(keyOf(it))) continue;
+      if (have.has(keyOf(it)) || !free(it)) continue;
       have.add(keyOf(it));
       target.items.push({ ...it, id: id() });
     }
     if (!same && target.items.length) out.push(target);
   }
-  return out;
+  return out.filter((g) => g.items.length);
 }
 
 function windowsWorkspaces(apps, paths, { favorites = [], desktopGroups = [] } = {}) {
@@ -144,11 +147,10 @@ function windowsWorkspaces(apps, paths, { favorites = [], desktopGroups = [] } =
     .filter(Boolean)
     .map((a) => appItem(a));
 
-  // Zona 1: lo que más usas (según Windows) o, si no se sabe, lo básico.
+  // Zona 1: lo que más usas según Windows (si no hay datos, solo el Explorador y el navegador).
   const favs = [explorer, browser()].filter(Boolean);
   const seen = new Set(favs.map(keyOf));
-  const extra = favorites.length ? favorites : [office[0], office[1], notepad].filter(Boolean).map((a) => appItem(a));
-  for (const f of extra) {
+  for (const f of favorites) {
     if (favs.length >= 8 || !f || seen.has(keyOf(f))) continue;
     seen.add(keyOf(f));
     favs.push({ ...f, id: id() });
@@ -159,7 +161,7 @@ function windowsWorkspaces(apps, paths, { favorites = [], desktopGroups = [] } =
     ? group('Oficina', [...office.map((a) => appItem(a)), appItem(notepad)], 'indigo')
     : group('Oficina', [appItem(notepad), appItem(A(/^wordpad$/i))], 'indigo');
   const funGroup = fun.length > 1 ? group('Entretenimiento', fun, 'atardecer') : null;
-  const groups = mergeGroups([officeGroup, funGroup, group('Utilidades', tools, 'grafito')].filter((g) => g && g.items.length), desktopGroups);
+  const groups = mergeGroups([officeGroup, funGroup, group('Utilidades', tools, 'grafito')].filter((g) => g && g.items.length), desktopGroups, favs);
 
   // Zona 3: carpetas en vivo y herramientas de Lanzadera.
   const principal = zones(favs, groups, [

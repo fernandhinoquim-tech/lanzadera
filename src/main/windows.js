@@ -414,9 +414,18 @@ class TaskbarButton {
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
     });
     hardenWebContents(win.webContents);
+    // Al restaurarse, esta ventana toma el foco: primero se vuelve a minimizar y recién después se
+    // despliega la barra, para que no la cierre al perder el foco.
     win.on('restore', () => {
-      setTimeout(() => !win.isDestroyed() && win.minimize(), 0);
-      this.onClick();
+      if (this.pending) return;
+      this.pending = true;
+      setTimeout(() => {
+        if (!win.isDestroyed()) win.minimize();
+        setTimeout(() => {
+          this.pending = false;
+          this.onClick();
+        }, 80);
+      }, 0);
     });
     // Si se cierra desde la barra de tareas («Cerrar ventana»), vuelve a aparecer: en este modo
     // es la forma de abrir la barra. No se bloquea el cierre para no frenar el apagado de Windows.

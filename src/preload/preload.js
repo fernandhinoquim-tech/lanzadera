@@ -95,6 +95,8 @@ contextBridge.exposeInMainWorld('lanz', {
   setInteractive: (v) => ipcRenderer.send('dock:interactive', v),
   reportBar: (info) => ipcRenderer.send('dock:bar', info),
   onDodge: (cb) => on('dock:dodge', cb),
+  onSummon: (cb) => on('dock:summon', cb),
+  summon: (open) => ipcRenderer.send('dock:summon', !!open),
   raise: () => ipcRenderer.send('dock:raise'),
   cursor: () => ipcRenderer.invoke('dock:cursor'),
   focusDock: () => ipcRenderer.send('dock:focus'),

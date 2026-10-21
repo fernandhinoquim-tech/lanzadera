@@ -17,7 +17,7 @@ const { FolderWatcher } = require('./folders');
 const { Updater } = require('./updater');
 const { SearchIndex } = require('./search');
 const { createBackup } = require('./backup');
-const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica } = require('./windows');
+const { DockManager, PanelWindow, SearchWindow, MonitorWindows, TaskbarButton, isWin11, supportsMica } = require('./windows');
 const { Metrics } = require('./metrics');
 const { CpuSensors } = require('./sensors');
 const { createTray } = require('./tray');
@@ -33,7 +33,11 @@ const ctx = { watchRequests: new Map(), hotkeyStatus: {} };
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => ctx.panel?.open('/inicio'));
+  // En modo «botón», abrir Lanzadera otra vez (p. ej. su icono anclado) despliega la barra.
+  app.on('second-instance', () => {
+    if (ctx.docks?.taskbarMode()) ctx.docks.summonToggle();
+    else ctx.panel?.open('/inicio');
+  });
   app.whenReady().then(init).catch((e) => {
     console.error(e);
     app.exit(1);
@@ -215,6 +219,7 @@ async function init() {
   ctx.shell = new ShellBridge({ stateFile: path.join(dir, 'appbars.json') });
   ctx.running = new RunningTracker(ctx.store, ctx.shell);
   ctx.docks = new DockManager(ctx.store, ctx.shell);
+  ctx.taskbarButton = new TaskbarButton({ onClick: () => ctx.docks.summonToggle(), shell: ctx.shell });
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
   ctx.cpuSensors = new CpuSensors();
@@ -253,6 +258,7 @@ async function init() {
   ctx.updater.init();
   ctx.docks.sync();
   ctx.monitor.sync();
+  ctx.taskbarButton.sync(ctx.docks.taskbarMode());
   ctx.tray = createTray(ctx);
   ctx.shell.on('fullscreen', (id) => ctx.docks.setFullscreen(id));
   ctx.shell.on('foreground', (fg) => {
@@ -269,6 +275,8 @@ async function init() {
     }
     ctx.docks.sync();
     ctx.docks.setFullscreen(ctx.shell.fullscreenDisplay);
+    ctx.taskbarButton.sync(ctx.docks.taskbarMode());
+    if (!ctx.docks.taskbarMode() && ctx.docks.summoned) ctx.docks.summon(false);
     ctx.monitor.sync();
     ctx.clip.apply();
     registerHotkeys();
@@ -322,6 +330,7 @@ app.on('window-all-closed', () => {
   // Lanzadera sigue activa en la bandeja aunque se cierren las ventanas.
 });
 app.on('before-quit', (e) => {
+  app.isQuitting = true;
   flushAll();
   if (released || !ctx.shell?.alive) return;
   e.preventDefault();

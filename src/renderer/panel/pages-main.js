@@ -74,7 +74,7 @@ export function homePage() {
     ),
     ...section('Rápido',
       card({ icon: 'move', title: 'Posición del dock', control: seg([['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']], c.position.edge, (v) => patch({ position: { edge: v } })) }),
-      card({ icon: 'eye', title: 'Cuando no lo uso', control: seg([['normal', 'Visible'], ['compact', 'Compacto'], ['mini', 'Mini'], ['hidden', 'Oculto']], c.position.idle, (v) => patch({ position: { idle: v } })) }),
+      card({ icon: 'eye', title: 'Cuando no lo uso', control: seg([['normal', 'Visible'], ['compact', 'Compacto'], ['mini', 'Mini'], ['hidden', 'Oculto'], ['taskbar', 'Botón']], c.position.idle, (v) => patch({ position: { idle: v } })) }),
       card({ icon: 'app-window', title: 'Con ventanas abiertas', control: seg([['reserve', 'No tapar'], ['dodge', 'Esconderse'], ['desktop', 'Al fondo'], ['top', 'Encima']], c.position.windows, (v) => patch({ position: { windows: v } })) }),
       card({ icon: 'columns-2', title: 'Armar mi barra en dos zonas', desc: 'Tus programas más usados y tus accesos del escritorio agrupados.', onClick: () => P.navigate('/accesos') }),
       card({ icon: 'sun-moon', title: 'Tema', control: seg([['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], c.appearance.theme, (v) => patch({ appearance: { theme: v } })) }),
@@ -178,11 +178,13 @@ export function positionPage() {
     ['compact', 'Compacta', 'Pequeña en reposo; crece al pasar el mouse.'],
     ['mini', 'Mini', 'Solo una línea de color; se abre al tocarla.'],
     ['hidden', 'Ocultar', 'Desaparece; vuelve al llevar el mouse al borde.'],
+    ['taskbar', 'Botón en la barra de tareas', 'Se despliega encima de todo al hacer clic en su icono junto al botón de Windows.'],
   ]) {
     const p = h('div.pick' + (pos.idle === v ? '.on' : ''), { html: `<b>${t}</b><small>${d}</small>` });
     p.addEventListener('click', () => set({ idle: v }));
     modes.append(p);
   }
+  const taskbarHelp = pos.idle === 'taskbar' ? card({ icon: 'pin', title: 'Ancla el botón junto al de Windows', desc: 'Haz clic derecho en el icono de Lanzadera en la barra de tareas › <b>Anclar a la barra de tareas</b>, y arrástralo junto al botón de Windows. Un clic despliega la barra encima de todo; otro clic, Esc o un clic fuera la ocultan.' }) : null;
   return page(
     'Posición',
     'Elige en qué borde vive tu dock y cómo se comporta cuando no lo usas.',
@@ -195,7 +197,7 @@ export function positionPage() {
       )
     ),
     ...section('Con ventanas abiertas', card({ icon: 'app-window', title: 'Qué hace el dock con tus ventanas', desc: 'Con «No tapar ventanas», Windows reserva la franja del dock como hace con la barra de tareas.', col: true, control: windowPicks() })),
-    ...section('Cuando no lo uso', card({ icon: 'eye', title: 'Modo de reposo', col: true, control: modes })),
+    ...section('Cuando no lo uso', card({ icon: 'eye', title: 'Modo de reposo', col: true, control: modes }), taskbarHelp),
     ...section('Ajuste fino',
       card({ icon: 'monitor', title: 'Pantalla', desc: 'Con varios monitores puedes tener un dock en cada uno.', control: select(displays, pos.display, (v) => set({ display: v })) }),
       card({ icon: 'panel-bottom', title: 'Encima de la barra de tareas de Windows', desc: 'Usa todo el borde de la pantalla (tapa la barra de tareas si está en el mismo borde).', control: toggle(pos.overTaskbar, (v) => set({ overTaskbar: v })) }),

@@ -253,7 +253,7 @@ export function welcomePage() {
       edges.append(p);
     }
     const modes = h('div.picks', { style: { marginTop: '12px' } });
-    for (const [v, t, d] of [['compact', 'Compacta', 'Pequeña; crece al pasar el mouse (recomendado)'], ['normal', 'Siempre visible', 'Tamaño completo todo el tiempo'], ['mini', 'Mini', 'Solo una línea de color'], ['hidden', 'Ocultar', 'Aparece al llevar el mouse al borde']]) {
+    for (const [v, t, d] of [['compact', 'Compacta', 'Pequeña; crece al pasar el mouse (recomendado)'], ['normal', 'Siempre visible', 'Tamaño completo todo el tiempo'], ['mini', 'Mini', 'Solo una línea de color'], ['hidden', 'Ocultar', 'Aparece al llevar el mouse al borde'], ['taskbar', 'Botón en la barra de tareas', 'Un clic en su icono junto al botón de Windows la despliega']]) {
       const p = h('div.pick' + (c.position.idle === v ? '.on' : ''), { html: `<b>${t}</b><small>${d}</small>` });
       p.addEventListener('click', () => patch({ position: { idle: v } }));
       modes.append(p);
@@ -263,6 +263,7 @@ export function welcomePage() {
       h('p.lead', { text: 'Elige un borde: lo verás moverse al instante. Puedes cambiarlo cuando quieras con clic derecho sobre el dock.' }),
       edges,
       modes,
+      c.position.idle === 'taskbar' ? h('p.lead', { style: { marginTop: '12px', fontSize: '13.5px' }, html: 'Ancla el icono de Lanzadera: clic derecho sobre él en la barra de tareas › <b>Anclar a la barra de tareas</b>, y arrástralo junto al botón de Windows.' }) : null,
       h('h2.news-h', { text: 'Con ventanas abiertas, el dock…' }),
       windowPicks(),
       h('div.actions', button('Atrás', () => go(0)), button('Siguiente', () => go(2), { primary: true, icon: 'arrow-right' })),

@@ -31,7 +31,7 @@ function baseConfig() {
       display: 'primary', // primary | all | <id de pantalla>
       overTaskbar: false,
       margin: 10,
-      idle: 'compact', // normal | compact | mini | hidden
+      idle: 'compact', // normal | compact | mini | hidden | taskbar (botón en la barra de tareas)
       windows: 'reserve', // reserve | dodge | top | desktop: qué hace con las ventanas abiertas
       showDelay: 120,
       hideDelay: 450,

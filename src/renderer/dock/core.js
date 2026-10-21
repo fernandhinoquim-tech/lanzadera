@@ -12,6 +12,7 @@ export const S = {
   dragging: false,
   frozen: false,
   dodged: false,
+  summoned: false,
   running: new Set(),
   hooks: {},
 };
@@ -22,9 +23,16 @@ export function ap() {
   return S.config.appearance;
 }
 
-// Modo de reposo efectivo: al esquivar una ventana, el dock se esconde contra el borde.
+// Modo de reposo efectivo: al esquivar una ventana, el dock se esconde contra el borde. Con el
+// botón de la barra de tareas, la barra queda escondida hasta que se la llama.
 export function idleMode() {
-  return S.dodged ? 'hidden' : S.config.position.idle;
+  const m = S.config.position.idle;
+  if (m === 'taskbar') return 'hidden';
+  return S.dodged ? 'hidden' : m;
+}
+
+export function taskbarMode() {
+  return S.config?.position.idle === 'taskbar';
 }
 
 export function isVertical() {

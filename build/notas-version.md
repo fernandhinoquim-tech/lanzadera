@@ -1,7 +1,6 @@
 ## Novedades
 
-- **Barra al fondo, en el escritorio.** Nueva opción (clic derecho › Con ventanas abiertas › Quedar al fondo): la barra deja de estar encima, queda detrás de tus ventanas como un icono del escritorio y vuelve a verse al mostrar el escritorio (Win + D). El monitor de rendimiento hace lo mismo cuando no está fijado encima.
-- **Temperatura real del procesador.** Si tienes LibreHardwareMonitor (con su servidor web), HWiNFO u OpenHardwareMonitor abiertos, Lanzadera muestra la temperatura del procesador en su medidor. El monitor explica cómo activarla al pasar el puntero.
+- **Botón en la barra de tareas.** Nuevo modo (clic derecho en la barra › Al no usarla › Botón en la barra de tareas): Lanzadera aparece como un icono en la barra de tareas de Windows. Ánclalo y ponlo junto al botón de Windows: un clic despliega la barra encima de todo, sin importar qué ventanas tengas abiertas, y otro clic la oculta. También se oculta al abrir un programa, con Esc o al hacer clic fuera, como el menú Inicio.
 
 ## Cómo instalar
 

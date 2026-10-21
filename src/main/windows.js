@@ -86,6 +86,8 @@ class DockManager {
     this.hidden = false;
     this.fullscreenDisplay = null;
     this.quietUntil = 0;
+    this.summoned = false;
+    this.lastBlurHide = 0;
     if (shell) {
       shell.on('appbar', (e) => this.onAppBar(e));
       shell.on('foreground', (fg) => this.onForeground(fg));
@@ -201,6 +203,13 @@ class DockManager {
     });
     win.webContents.on('did-finish-load', () => {
       if (win.lz.dodged) win.webContents.send('dock:dodge', true);
+      if (this.summoned) win.webContents.send('dock:summon', true);
+    });
+    // Desplegada con el botón de la barra de tareas: se oculta al hacer clic fuera, como el menú Inicio.
+    win.on('blur', () => {
+      if (!this.summoned) return;
+      this.lastBlurHide = Date.now();
+      this.summon(false);
     });
     win.on('closed', () => {
       for (const [id, w] of this.wins) if (w === win) this.wins.delete(id);
@@ -296,6 +305,32 @@ class DockManager {
     }
   }
 
+  taskbarMode() {
+    return this.store.get().position.idle === 'taskbar';
+  }
+
+  // Botón en la barra de tareas: despliega la barra encima de todo o la vuelve a ocultar.
+  summon(open) {
+    this.summoned = !!open;
+    for (const w of this.all()) {
+      if (open) {
+        w.lz.topmost = true;
+        w.setAlwaysOnTop(true, 'screen-saver');
+        if (!w.isVisible()) w.showInactive();
+        w.moveTop();
+        w.focus();
+      }
+      if (!w.webContents.isLoading()) w.webContents.send('dock:summon', !!open);
+    }
+    if (!open) this.applyWindowsMode();
+  }
+
+  // Clic en el botón: si la barra acaba de cerrarse por ese mismo clic (perdió el foco), no se reabre.
+  summonToggle() {
+    if (this.summoned) this.summon(false);
+    else if (Date.now() - this.lastBlurHide > 450) this.summon(true);
+  }
+
   // Al fondo: al ir al escritorio (clic en él o Win + D) el dock vuelve a quedar a la vista,
   // y las ventanas que se abran después lo tapan.
   raiseOnDesktop() {
@@ -317,6 +352,7 @@ class DockManager {
   }
 
   toggle(force) {
+    if (this.taskbarMode()) return this.summon(force === undefined ? !this.summoned : !!force);
     this.hidden = force === undefined ? !this.hidden : !force;
     this.applyVisibility();
     this.applyWindowsMode();
@@ -335,6 +371,66 @@ class DockManager {
     if (!win || win.isDestroyed()) return;
     if (interactive) win.setIgnoreMouseEvents(false);
     else win.setIgnoreMouseEvents(true, { forward: true });
+  }
+}
+
+// Icono de Lanzadera en la barra de tareas para el modo «botón»: una ventana mínima, fuera de la
+// pantalla y siempre minimizada. Cada clic en su icono la restaura; se avisa y se vuelve a minimizar.
+class TaskbarButton {
+  constructor({ onClick, shell = null }) {
+    this.onClick = onClick;
+    this.shell = shell;
+    this.win = null;
+    this.enabled = false;
+  }
+
+  sync(enabled) {
+    this.enabled = !!enabled;
+    if (enabled && !this.win) this.create();
+    else if (!enabled && this.win) {
+      const w = this.win;
+      this.win = null;
+      if (!w.isDestroyed()) w.destroy();
+    }
+  }
+
+  create() {
+    const win = new BrowserWindow({
+      x: -32000,
+      y: -32000,
+      width: 1,
+      height: 1,
+      show: false,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: false,
+      hasShadow: false,
+      title: 'Lanzadera',
+      icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+    });
+    hardenWebContents(win.webContents);
+    win.on('restore', () => {
+      setTimeout(() => !win.isDestroyed() && win.minimize(), 0);
+      this.onClick();
+    });
+    // Si se cierra desde la barra de tareas («Cerrar ventana»), vuelve a aparecer: en este modo
+    // es la forma de abrir la barra. No se bloquea el cierre para no frenar el apagado de Windows.
+    win.on('closed', () => {
+      if (this.win !== win) return;
+      this.win = null;
+      setTimeout(() => {
+        if (this.enabled && !this.win && !require('electron').app.isQuitting) this.create();
+      }, 1500);
+    });
+    win.showInactive();
+    win.minimize();
+    this.shell?.noAnimation(win);
+    this.win = win;
   }
 }
 
@@ -548,4 +644,4 @@ class MonitorWindows {
   }
 }
 
-module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica, dockArea, dockBounds, intersects };
+module.exports = { DockManager, PanelWindow, SearchWindow, MonitorWindows, TaskbarButton, isWin11, supportsMica, dockArea, dockBounds, intersects };

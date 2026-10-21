@@ -181,6 +181,14 @@ class ShellBridge extends EventEmitter {
     this.send(`focus ${hwnd}`);
   }
 
+  // Sin animación de minimizar/restaurar (para el botón de la barra de tareas).
+  noAnimation(win) {
+    const hwnd = hwndOf(win);
+    if (!hwnd) return;
+    if (this.child) this.send(`noanim ${hwnd}`);
+    else this.once('ready', () => this.send(`noanim ${hwnd}`));
+  }
+
   minimize(hwnd) {
     this.send(`min ${hwnd}`);
   }

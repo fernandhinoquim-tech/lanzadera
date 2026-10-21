@@ -692,6 +692,7 @@ public static class LzShell {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint RegisterWindowMessage(string s);
   [DllImport("shell32.dll")] static extern UIntPtr SHAppBarMessage(uint msg, ref APPBARDATA d);
   [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr h, int attr, out int v, int size);
+  [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int v, int size);
   [DllImport("kernel32.dll")] static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
   [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
   [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern bool QueryFullProcessImageName(IntPtr h, int flags, StringBuilder s, ref int size);
@@ -916,6 +917,7 @@ public static class LzShell {
       } else if (a[0] == "unbar") Unbar(h);
       else if (a[0] == "focus") Focus(h);
       else if (a[0] == "min") ShowWindow(h, 6);
+      else if (a[0] == "noanim") { int one = 1; DwmSetWindowAttribute(h, 3, ref one, 4); }
       else if (a[0] == "wins") winsNow = true;
     } catch (Exception e) {
       Out("err " + J(cmd + ": " + e.Message));

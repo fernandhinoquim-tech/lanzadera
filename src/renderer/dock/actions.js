@@ -250,6 +250,7 @@ export function dockMenu(x, y, index = null) {
         ['compact', 'Compacta (crece al pasar)'],
         ['mini', 'Mini (una línea)'],
         ['hidden', 'Ocultar automáticamente'],
+        ['taskbar', 'Botón en la barra de tareas'],
       ].map(([v, l]) => ({ label: l, checked: pos.idle === v, onClick: () => set({ position: { idle: v } }) })),
     },
     {

@@ -281,6 +281,7 @@ function register(ctx) {
   // Ventanas
   ipcMain.on('dock:interactive', (e, v) => docks.setInteractive(BrowserWindow.fromWebContents(e.sender), !!v));
   ipcMain.on('dock:bar', (e, info) => docks.setBar(BrowserWindow.fromWebContents(e.sender), info));
+  ipcMain.on('dock:summon', (e, open) => docks.summon(!!open));
   ipcMain.on('dock:raise', (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);
     if (w && !w.isDestroyed() && docks.canRaise()) w.moveTop();

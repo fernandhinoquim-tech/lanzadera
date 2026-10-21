@@ -1,7 +1,7 @@
 // Lanzadera — la barra (dock): render, efecto lupa, modos de reposo, arrastrar y soltar.
 import { h, esc, applyTheme, clamp, uid } from '../shared/dom.js';
 import { iconHTML, installIconFallbacks } from '../shared/icon-view.js';
-import { S, api, ap, isVertical, idleMode, findItem, saveItems, toast, launchItem } from './core.js';
+import { S, api, ap, isVertical, idleMode, taskbarMode, findItem, saveItems, toast, launchItem } from './core.js';
 import { openMenu, closeMenu, menuOpen } from './menu.js';
 import { closePopup, popupOpen, popupItemId, popupIsHover, openPopup, refreshIfShowing } from './popups.js';
 import { widgetTile, METRIC_WIDGETS } from './widgets.js';
@@ -379,6 +379,7 @@ function setExpanded(v) {
 
 function wantsOpen(p) {
   const mode = idleMode();
+  if (taskbarMode()) return S.summoned;
   if (S.dragging || popupOpen() || menuOpen()) return true;
   if (!p) return false;
   if (expanded) return overDockZone(p) || overLayer(p);
@@ -620,6 +621,7 @@ itemsEl.addEventListener(
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (taskbarMode() && S.summoned && !menuOpen() && !popupOpen()) return api.summon(false);
     closeMenu();
     closePopup();
   }
@@ -956,6 +958,19 @@ async function boot() {
     S.running = new Set(ids || []);
     applyRunning();
   }).catch(() => {});
+  // Botón de la barra de tareas: desplegar o esconder la barra al instante.
+  api.onSummon((v) => {
+    S.summoned = !!v;
+    if (!S.summoned) {
+      closeMenu();
+      closePopup();
+    }
+    clearTimeout(showTimer);
+    clearTimeout(hideTimer);
+    showTimer = hideTimer = null;
+    setExpanded(S.summoned);
+    refreshHit();
+  });
   api.onDodge((v) => {
     if (S.dodged === !!v) return;
     S.dodged = !!v;

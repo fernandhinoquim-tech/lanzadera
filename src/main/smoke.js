@@ -379,6 +379,27 @@ async function run(ctx) {
       const res = await dockplan.desktopGroups(ctx.paths);
       return { count: res.count, groups: res.groups.map((g) => [g.name, g.items.map((i) => i.name)]) };
     });
+    // Botón en la barra de tareas: cada clic en el icono despliega u oculta la barra.
+    await step('boton-barra-tareas', async () => {
+      ctx.store.patch({ position: { idle: 'taskbar', windows: 'top' } });
+      await wait(1500);
+      const btn = ctx.taskbarButton.win;
+      if (!btn) throw new Error('No se creó el botón de la barra de tareas');
+      const expanded = () => dockEval(`document.getElementById('stage').classList.contains('expanded')`);
+      const info = { minimized: btn.isMinimized(), inTaskbar: !btn.isDestroyed(), before: await expanded() };
+      btn.restore();
+      await wait(1200);
+      info.afterFirstClick = await expanded();
+      await shot(dockWin(), '43-boton-barra-tareas');
+      btn.restore();
+      await wait(1200);
+      info.afterSecondClick = await expanded();
+      ctx.store.patch({ position: { idle: 'normal' } });
+      await wait(800);
+      info.removed = !ctx.taskbarButton.win;
+      if (info.before || !info.afterFirstClick || info.afterSecondClick || !info.removed) throw new Error('El botón no alternó la barra: ' + JSON.stringify(info));
+      return info;
+    });
     // Último paso de Windows: al cerrar, el ayudante suelta la franja aunque nadie se lo pida.
     await step('soltar-al-salir', async () => {
       ctx.store.patch({ position: { windows: 'top', idle: 'normal' } });

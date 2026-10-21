@@ -21,7 +21,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 |---|---|---|
 | 🔍 | **Efecto lupa** | Los iconos crecen al pasar el mouse. En modo *compacto* la barra es pequeña y se agranda al tocarla. |
 | 📍 | **Cualquier borde** | Abajo, arriba, izquierda o derecha; alineada al inicio, centro o final; en una o en todas las pantallas. |
-| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color) u oculta (aparece al llevar el mouse al borde). |
+| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color), oculta (aparece al llevar el mouse al borde) o **botón en la barra de tareas** (un clic en su icono, junto al botón de Windows, la despliega encima de todo). |
 | 🪟 | **No tapa tus ventanas** | Reserva su franja como la barra de tareas: las ventanas maximizadas terminan justo arriba. También puede esconderse cuando una ventana lo toca, quedar **al fondo en el escritorio** (detrás de tus ventanas) o encima de todo. |
 | ⭐ | **Barra en dos zonas** | Primero tus programas más usados (según el uso real en Windows) y después tus grupos de accesos directos. |
 | 🗂️ | **Grupos** | Un icono que abre muchos más, en **abanico**, **cuadrícula** o **lista**. Suelta un icono sobre otro para crear uno, o arma grupos por tema con los accesos de tu escritorio. «Abrir todo» lanza el grupo completo. |

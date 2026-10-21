@@ -324,6 +324,8 @@ async function run(ctx) {
         if (st.state === 'ok') break;
         await wait(2000);
       }
+      // Ventana nueva: un paso anterior deja abierto el editor de iconos.
+      ctx.panel.win?.destroy();
       const w = ctx.panel.open('/temperatura');
       await waitLoad(w);
       w.webContents.send('panel:route', '/temperatura');

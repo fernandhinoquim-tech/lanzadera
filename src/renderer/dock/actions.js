@@ -258,6 +258,7 @@ export function dockMenu(x, y, index = null) {
       submenu: [
         ['reserve', 'Reservar su espacio (no las tapa)'],
         ['dodge', 'Esconderse si una ventana lo toca'],
+        ['desktop', 'Quedar al fondo, en el escritorio'],
         ['top', 'Quedar encima de todo'],
       ].map(([v, l]) => ({ label: l, checked: pos.windows === v, onClick: () => set({ position: { windows: v } }) })),
     },

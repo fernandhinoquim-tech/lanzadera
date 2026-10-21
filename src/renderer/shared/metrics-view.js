@@ -2,6 +2,7 @@
 import { h, esc } from './dom.js';
 import { chartSVG, ringSVG, gaugeSVG, fmtBytes, fmtRate, METRIC_COLORS as C, ZONE_TEXT } from './charts.js';
 import { fluentUrl } from './icon-view.js';
+import { CPU_TEMP_HELP } from './metrics-gadget.js';
 
 const ICON = { cpu: '1f4bb', mem: '1f4df', gpu: '1f3ae', net: '1f6dc', disk: '1f4be', procs: '1f4ca', sys: '1f50b', temp: '1f321-fe0f' };
 
@@ -125,8 +126,8 @@ export function createDashboard({ mode = 'full' } = {}) {
                 `<div class="tgauge"><div class="tg-viz">${gaugeSVG({ value: s.value, min: 20, max: s.max, zones: s, unit: '°', status: ZONE_TEXT[s.zone] })}</div>` +
                 `<div><b>${esc(s.label)}</b><small>${esc(s.source)}</small><small>Cuidado desde ${s.caution} °C · Crítico desde ${s.critical} °C</small><small>Límites ${esc(s.limits)}</small></div></div>`
             )
-            .join('')}</div>`
-        : '<div class="mna">Este equipo no comparte temperaturas con Windows sin permisos especiales. La de la tarjeta gráfica y la de los discos SSD aparecen cuando su controlador las informa.</div>';
+            .join('')}</div>` + (list.some((s) => s.key === 'cpu') ? '' : `<div class="cpuhelp">${CPU_TEMP_HELP}</div>`)
+        : `<div class="cpuhelp">${CPU_TEMP_HELP}</div>`;
     }
 
     // Procesos

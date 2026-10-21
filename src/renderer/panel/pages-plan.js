@@ -7,6 +7,7 @@ import { page, section, card, toggle, button, toast, gl } from './ui.js';
 export const WINDOW_MODES = [
   ['reserve', 'No tapar ventanas', 'Reserva su espacio: las ventanas maximizadas terminan justo arriba del dock. Recomendado.'],
   ['dodge', 'Esconderse', 'Se aparta cuando una ventana lo toca y vuelve al llevar el mouse al borde.'],
+  ['desktop', 'Al fondo, en el escritorio', 'Queda detrás de tus ventanas, como un icono del escritorio. Vuelve a verse al mostrar el escritorio (Win + D).'],
   ['top', 'Siempre encima', 'Queda sobre todas las ventanas, como antes.'],
 ];
 

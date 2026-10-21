@@ -76,7 +76,8 @@ function intersects(a, b, inset = 0) {
 }
 
 // Con ventanas abiertas, el dock puede: reservar su franja (las ventanas maximizadas terminan
-// antes), esconderse cuando la ventana activa lo toca, o quedar encima de todo.
+// antes), esconderse cuando la ventana activa lo toca, quedar encima de todo o quedar al fondo,
+// en el escritorio, detrás de las ventanas.
 class DockManager {
   constructor(store, shell = null) {
     this.store = store;
@@ -105,6 +106,7 @@ class DockManager {
 
   windowsMode() {
     const m = this.store.get().position.windows;
+    if (m === 'desktop') return 'desktop';
     if (process.platform !== 'win32' || !this.shell) return 'top';
     return m;
   }
@@ -187,7 +189,7 @@ class DockManager {
       type: process.platform === 'win32' ? 'toolbar' : undefined,
       webPreferences: webPrefs(),
     });
-    win.lz = { bar: null, reserved: null, reserveKey: null, dodged: false };
+    win.lz = { bar: null, reserved: null, reserveKey: null, dodged: false, topmost: true };
     win.displayId = String(display.id);
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setIgnoreMouseEvents(true, { forward: true });
@@ -226,6 +228,11 @@ class DockManager {
   applyWindowsMode() {
     const mode = this.windowsMode();
     for (const w of this.all()) {
+      const top = mode !== 'desktop';
+      if (w.lz.topmost !== top) {
+        w.lz.topmost = top;
+        w.setAlwaysOnTop(top, 'screen-saver');
+      }
       if (mode === 'reserve' && !this.hidden) this.reserve(w);
       else this.unreserve(w);
       if (mode !== 'dodge') this.setDodged(w, false);
@@ -276,6 +283,7 @@ class DockManager {
   }
 
   onForeground(fg) {
+    if (this.windowsMode() === 'desktop' && fg?.desk) return this.raiseOnDesktop();
     if (this.windowsMode() !== 'dodge' || !fg || fg.own || fg.shell) return;
     for (const w of this.all()) {
       let dodge = false;
@@ -286,6 +294,16 @@ class DockManager {
       }
       this.setDodged(w, dodge);
     }
+  }
+
+  // Al fondo: al ir al escritorio (clic en él o Win + D) el dock vuelve a quedar a la vista,
+  // y las ventanas que se abran después lo tapan.
+  raiseOnDesktop() {
+    for (const w of this.all()) if (w.isVisible()) w.moveTop();
+  }
+
+  canRaise() {
+    return this.windowsMode() !== 'desktop';
   }
 
   setDodged(win, v) {
@@ -446,6 +464,11 @@ class MonitorWindows {
       this.gadget.setAlwaysOnTop(!!m.onTop, 'floating');
       this.gadget.setOpacity(Math.max(0.4, Math.min(1, m.opacity || 1)));
     }
+  }
+
+  // Sin «encima de las ventanas», el monitor vive en el escritorio: vuelve a la vista al ir a él.
+  raiseOnDesktop() {
+    if (this.gadget && !this.gadget.isDestroyed() && !this.store.get().monitor.onTop) this.gadget.moveTop();
   }
 
   createGadget() {

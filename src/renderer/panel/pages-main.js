@@ -75,7 +75,7 @@ export function homePage() {
     ...section('Rápido',
       card({ icon: 'move', title: 'Posición del dock', control: seg([['bottom', 'Abajo'], ['top', 'Arriba'], ['left', 'Izquierda'], ['right', 'Derecha']], c.position.edge, (v) => patch({ position: { edge: v } })) }),
       card({ icon: 'eye', title: 'Cuando no lo uso', control: seg([['normal', 'Visible'], ['compact', 'Compacto'], ['mini', 'Mini'], ['hidden', 'Oculto']], c.position.idle, (v) => patch({ position: { idle: v } })) }),
-      card({ icon: 'app-window', title: 'Con ventanas abiertas', control: seg([['reserve', 'No tapar'], ['dodge', 'Esconderse'], ['top', 'Encima']], c.position.windows, (v) => patch({ position: { windows: v } })) }),
+      card({ icon: 'app-window', title: 'Con ventanas abiertas', control: seg([['reserve', 'No tapar'], ['dodge', 'Esconderse'], ['desktop', 'Al fondo'], ['top', 'Encima']], c.position.windows, (v) => patch({ position: { windows: v } })) }),
       card({ icon: 'columns-2', title: 'Armar mi barra en dos zonas', desc: 'Tus programas más usados y tus accesos del escritorio agrupados.', onClick: () => P.navigate('/accesos') }),
       card({ icon: 'sun-moon', title: 'Tema', control: seg([['system', 'Sistema'], ['light', 'Claro'], ['dark', 'Oscuro']], c.appearance.theme, (v) => patch({ appearance: { theme: v } })) }),
       card({ icon: env.dockHidden ? 'eye-off' : 'eye', title: env.dockHidden ? 'El dock está oculto' : 'El dock está visible', control: button(env.dockHidden ? 'Mostrar' : 'Ocultar', () => api.run('toggleDock')) })

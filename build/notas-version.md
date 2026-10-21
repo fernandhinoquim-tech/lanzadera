@@ -1,9 +1,7 @@
 ## Novedades
 
-- **Monitor de rendimiento renovado.** Medidores circulares para el procesador, la memoria y la gráfica, y gráficas de red y disco, con un diseño más moderno.
-- **Temperaturas con zonas de color.** Medidores para el procesador, la tarjeta gráfica y los discos SSD: verde es normal, amarillo es cuidado y rojo es crítico. Los límites se toman de la propia tarjeta o del fabricante del disco cuando los informan.
-- **Más información al pasar el puntero.** Cada medidor despliega su detalle: historial, programas que más consumen, memoria de video, mínima y máxima de la sesión, límites y consejos.
-- **Aviso de temperatura crítica.** Si algo se mantiene en rojo, Windows te muestra una notificación (se puede apagar en Configuración › Widgets).
+- **Barra al fondo, en el escritorio.** Nueva opción (clic derecho › Con ventanas abiertas › Quedar al fondo): la barra deja de estar encima, queda detrás de tus ventanas como un icono del escritorio y vuelve a verse al mostrar el escritorio (Win + D). El monitor de rendimiento hace lo mismo cuando no está fijado encima.
+- **Temperatura real del procesador.** Si tienes LibreHardwareMonitor (con su servidor web), HWiNFO u OpenHardwareMonitor abiertos, Lanzadera muestra la temperatura del procesador en su medidor. El monitor explica cómo activarla al pasar el puntero.
 
 ## Cómo instalar
 

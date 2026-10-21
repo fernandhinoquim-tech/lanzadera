@@ -95,6 +95,7 @@ const mockScript = (state) => `
           sens('disk0', 'SSD', Math.round(w(44, 47, 9)), 72, 82, 'Samsung SSD 980 PRO 1TB', 'del fabricante'),
         ];
         now.gpu.temp = now.sensors[1].value;
+        if (window.__noCpu) now.sensors = now.sensors.filter((x) => x.key !== 'cpu');
         for (const [kk, v] of [['cpu', now.cpu], ['mem', now.mem], ['gpu', now.gpu.util], ['rx', now.net.rx], ['tx', now.net.tx], ['dr', now.disk.r], ['dw', now.disk.w]]) { hist[kk].push(v); if (hist[kk].length > 90) hist[kk].shift(); }
         window.__mlast = { now, hist };
         emit('metrics', window.__mlast);
@@ -187,6 +188,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       } else if (kind === 'monitor') {
         const opts = arg ? JSON.parse(arg) : {};
         const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 350, h: opts.h || 760, dark: opts.dark !== false, patch: opts.patch || {} });
+        if (opts.noCpu) await page.evaluate(() => (window.__noCpu = true));
         await page.evaluate(() => window.lanz.metricsSubscribe(true));
         await wait(1500);
         if (opts.hover) {

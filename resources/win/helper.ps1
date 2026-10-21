@@ -391,6 +391,72 @@ public static class LzMet {
     return best;
   }
 
+  // Temperatura real del procesador: Windows solo la entrega a programas con un controlador y
+  // permisos de administrador. Si LibreHardwareMonitor u OpenHardwareMonitor están abiertos se
+  // lee de su proveedor WMI; si HWiNFO comparte sensores con gadgets, de su clave del registro.
+  static DateTime cpuTempRetry = DateTime.MinValue;
+
+  static int CpuTempRank(string name) {
+    string n = name.ToLowerInvariant();
+    if (n.Contains("package")) return 5;
+    if (n.Contains("tctl") || n.Contains("tdie")) return 4;
+    if (n.Contains("core max")) return 3;
+    if (n.Contains("core average")) return 2;
+    return 1;
+  }
+
+  static string CpuTempWmi(string ns, string src) {
+    using (System.Management.ManagementObjectSearcher q = new System.Management.ManagementObjectSearcher(ns, "SELECT Name, Identifier, Value FROM Sensor WHERE SensorType='Temperature'")) {
+      double best = 0, any = 0;
+      int rank = 0;
+      foreach (System.Management.ManagementBaseObject o in q.Get()) {
+        string id = Convert.ToString(o["Identifier"]) ?? "";
+        if (id.IndexOf("cpu", StringComparison.OrdinalIgnoreCase) < 0) continue;
+        double v = Convert.ToDouble(o["Value"], IC);
+        if (v <= 0 || v > 125) continue;
+        string name = Convert.ToString(o["Name"]) ?? "";
+        int r = CpuTempRank(name);
+        if (r > rank || (r == rank && v > best)) { rank = r; best = v; }
+        if (v > any) any = v;
+      }
+      double t = rank > 1 ? best : any;
+      return t > 0 ? "{\"t\":" + N(t) + ",\"src\":" + J(src) + "}" : null;
+    }
+  }
+
+  static string CpuTempHwinfo() {
+    using (RegistryKey k = Registry.CurrentUser.OpenSubKey("Software\\HWiNFO64\\VSB")) {
+      if (k == null) return null;
+      double best = 0;
+      int rank = 0;
+      for (int i = 0; i < 200; i++) {
+        object label = k.GetValue("Label" + i);
+        if (label == null) break;
+        string sensor = Convert.ToString(k.GetValue("Sensor" + i)) ?? "";
+        string l = Convert.ToString(label) ?? "";
+        string all = (sensor + " " + l).ToLowerInvariant();
+        if (!all.Contains("cpu") || !(all.Contains("package") || all.Contains("tctl") || all.Contains("tdie") || all.Contains("core max"))) continue;
+        double v;
+        string raw = (Convert.ToString(k.GetValue("ValueRaw" + i)) ?? "").Replace(',', '.');
+        if (!double.TryParse(raw, NumberStyles.Float, IC, out v) || v <= 0 || v > 125) continue;
+        int r = CpuTempRank(l);
+        if (r > rank) { rank = r; best = v; }
+      }
+      return best > 0 ? "{\"t\":" + N(best) + ",\"src\":\"HWiNFO\"}" : null;
+    }
+  }
+
+  static string CpuTemp() {
+    if (DateTime.UtcNow < cpuTempRetry) return "null";
+    string r = null;
+    try { r = CpuTempWmi("root\\LibreHardwareMonitor", "LibreHardwareMonitor"); } catch { }
+    if (r == null) { try { r = CpuTempWmi("root\\OpenHardwareMonitor", "OpenHardwareMonitor"); } catch { } }
+    if (r == null) { try { r = CpuTempHwinfo(); } catch { } }
+    // Sin ninguna de esas herramientas, se vuelve a mirar cada 20 segundos.
+    if (r == null) cpuTempRetry = DateTime.UtcNow.AddSeconds(20);
+    return r ?? "null";
+  }
+
   // Temperatura de discos SSD y NVMe (StorageDeviceTemperatureProperty), con los límites que
   // informa el fabricante. Los discos mecánicos no se consultan para no despertarlos.
   [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr CreateFile(string name, uint access, uint share, IntPtr sec, uint disp, uint flags, IntPtr tmpl);
@@ -515,14 +581,15 @@ public static class LzMet {
     StreamWriter w = new StreamWriter(outStream, new UTF8Encoding(false));
     w.AutoFlush = true;
     int n = 0;
-    string drives = "[]", procs = "null", dtemps = "[]", gperf = "null";
+    string drives = "[]", procs = "null", dtemps = "[]", gperf = "null", ctemp = "null";
     while (true) {
       if (n % 30 == 0) drives = Drives();
       if (n % 2 == 0) procs = Procs();
       if (n % 10 == 0) { try { dtemps = DiskTemps(); } catch { dtemps = "[]"; } }
       if (n % 2 == 0) { try { gperf = GpuPerf(); } catch { gperf = "null"; } }
+      if (n % 2 == 1) { try { ctemp = CpuTemp(); } catch { ctemp = "null"; } }
       string line = "{\"gpu\":" + Gpu() + ",\"net\":" + Net() + ",\"disk\":" + Disk() + ",\"cpu\":" + Cpu() + ",\"temps\":" + Temps() +
-        ",\"battery\":" + Battery() + ",\"drives\":" + drives + ",\"procs\":" + procs + ",\"gperf\":" + gperf + ",\"dtemps\":" + dtemps + "}";
+        ",\"battery\":" + Battery() + ",\"drives\":" + drives + ",\"procs\":" + procs + ",\"gperf\":" + gperf + ",\"dtemps\":" + dtemps + ",\"ctemp\":" + ctemp + "}";
       if (n > 0) w.WriteLine(line);
       n++;
       Thread.Sleep(1000);
@@ -533,7 +600,7 @@ public static class LzMet {
   }
 }
 '@
-  Add-Type -TypeDefinition $cs -IgnoreWarnings
+  Add-Type -ReferencedAssemblies System.Management -TypeDefinition $cs -IgnoreWarnings
   [LzMet]::Run($ParentPid)
   exit 0
 }

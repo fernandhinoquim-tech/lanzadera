@@ -94,7 +94,7 @@ function sanitizeConfig(c) {
   if (!['bottom', 'top', 'left', 'right'].includes(pos.edge)) pos.edge = 'bottom';
   if (!['start', 'center', 'end'].includes(pos.align)) pos.align = 'center';
   if (!['normal', 'compact', 'mini', 'hidden'].includes(pos.idle)) pos.idle = 'compact';
-  if (!['reserve', 'dodge', 'top'].includes(pos.windows)) pos.windows = 'reserve';
+  if (!['reserve', 'dodge', 'top', 'desktop'].includes(pos.windows)) pos.windows = 'reserve';
   pos.margin = Math.max(0, Math.min(80, Number(pos.margin) || 0));
   c.clipboard.max = Math.max(5, Math.min(200, Number(c.clipboard.max) || 40));
   const b = c.monitor.bounds;

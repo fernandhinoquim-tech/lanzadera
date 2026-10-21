@@ -19,6 +19,7 @@ const { SearchIndex } = require('./search');
 const { createBackup } = require('./backup');
 const { DockManager, PanelWindow, SearchWindow, MonitorWindows, isWin11, supportsMica } = require('./windows');
 const { Metrics } = require('./metrics');
+const { CpuSensors } = require('./sensors');
 const { createTray } = require('./tray');
 const { ShellBridge } = require('./shell');
 const { RunningTracker } = require('./running');
@@ -216,7 +217,8 @@ async function init() {
   ctx.docks = new DockManager(ctx.store, ctx.shell);
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
-  ctx.metrics = new Metrics({ config: () => ctx.store.get().monitor });
+  ctx.cpuSensors = new CpuSensors();
+  ctx.metrics = new Metrics({ config: () => ctx.store.get().monitor, cpuReader: () => ctx.cpuSensors.read() });
   ctx.metrics.on('alert', (s) => {
     try {
       if (Notification.isSupported()) new Notification({ title: `Temperatura crítica: ${s.label}`, body: `Llegó a ${s.value} °C (crítico desde ${s.critical} °C). Revisa la ventilación o cierra programas pesados.`, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') }).show();
@@ -253,6 +255,9 @@ async function init() {
   ctx.monitor.sync();
   ctx.tray = createTray(ctx);
   ctx.shell.on('fullscreen', (id) => ctx.docks.setFullscreen(id));
+  ctx.shell.on('foreground', (fg) => {
+    if (fg.desk) ctx.monitor.raiseOnDesktop();
+  });
   ctx.running.on('change', (ids) => broadcast('running', ids));
   ctx.shell.start();
 

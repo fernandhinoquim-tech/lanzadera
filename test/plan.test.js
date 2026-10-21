@@ -194,3 +194,17 @@ test('avisa una sola vez cuando una temperatura se queda en zona crítica', () =
   for (let i = 0; i < 4; i++) off.checkAlerts(hot);
   assert.deepEqual(alerts, ['gpu']);
 });
+
+test('toma la temperatura del procesador de LibreHardwareMonitor', () => {
+  const { cpuTempFromTree } = require('../src/main/sensors');
+  const tree = { Text: 'Sensor', Children: [{ Text: 'PC', Children: [
+    { Text: 'Intel Core i7', ImageURL: 'images_icon/cpu.png', Children: [{ Text: 'Temperatures', Children: [
+      { Text: 'CPU Core #1', Value: '58,0 °C', SensorId: '/intelcpu/0/temperature/0', Type: 'Temperature', Children: [] },
+      { Text: 'CPU Package', Value: '63,5 °C', SensorId: '/intelcpu/0/temperature/8', Type: 'Temperature', Children: [] },
+    ] }] },
+    { Text: 'NVIDIA GeForce', ImageURL: 'images_icon/nvidia.png', Children: [{ Text: 'Temperatures', Children: [{ Text: 'GPU Core', Value: '70,0 °C', Type: 'Temperature', Children: [] }] }] },
+  ] }] };
+  assert.deepEqual(cpuTempFromTree(tree), { value: 63.5, src: 'LibreHardwareMonitor', name: 'CPU Package' });
+  const amd = { Children: [{ Text: 'AMD Ryzen 7', ImageURL: 'images_icon/cpu.png', Children: [{ Text: 'Core (Tctl/Tdie)', Value: '0,0 °C', SensorId: '/amdcpu/0/temperature/2', Children: [] }] }] };
+  assert.equal(cpuTempFromTree(amd), null, 'sin el controlador PawnIO, AMD informa 0 °C y se descarta');
+});

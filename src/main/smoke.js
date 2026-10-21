@@ -146,6 +146,19 @@ async function run(ctx) {
     await wait(1400);
     await shot(dockWin(), '14-neon-claro');
   });
+  await step('al-fondo', async () => {
+    ctx.store.patch({ position: { windows: 'desktop', idle: 'normal' } });
+    await wait(800);
+    const onTop = dockWin().isAlwaysOnTop();
+    ctx.docks.onForeground({ desk: 1 });
+    await wait(300);
+    ctx.store.patch({ position: { windows: 'top' } });
+    await wait(600);
+    const back = dockWin().isAlwaysOnTop();
+    if (onTop) throw new Error('Al fondo, el dock no debería quedar encima de las ventanas');
+    if (!back) throw new Error('Al volver a «Siempre encima», el dock no quedó encima');
+    return { onTop, back };
+  });
   ctx.store.replace(cfg0);
   await wait(800);
 

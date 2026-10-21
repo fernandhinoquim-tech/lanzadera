@@ -283,7 +283,7 @@ function register(ctx) {
   ipcMain.on('dock:bar', (e, info) => docks.setBar(BrowserWindow.fromWebContents(e.sender), info));
   ipcMain.on('dock:raise', (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);
-    if (w && !w.isDestroyed()) w.moveTop();
+    if (w && !w.isDestroyed() && docks.canRaise()) w.moveTop();
   });
   ipcMain.handle('dock:cursor', (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);

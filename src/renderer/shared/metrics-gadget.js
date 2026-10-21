@@ -5,6 +5,12 @@ import { chartSVG, gaugeSVG, fmtBytes, fmtRate, METRIC_COLORS as C, ZONE_COLORS,
 
 const TEMP_SLOTS = 90;
 
+// Por qué no aparece la temperatura del procesador y cómo verla.
+export const CPU_TEMP_HELP =
+  '<p class="dnote">Windows protege el sensor del procesador: solo lo leen programas con permisos de administrador y un controlador especial. Para verlo aquí:</p>' +
+  '<ol class="dsteps"><li>Instala <b>LibreHardwareMonitor</b> (gratis y de código abierto) y ábrelo.</li><li>Si pregunta por <b>PawnIO</b>, elige <b>Aceptar</b>.</li><li>En <b>Options › Remote Web Server</b>, marca <b>Run</b> (puerto 8085).</li><li>En <b>Options</b>, marca <b>Run On Windows Startup</b>.</li></ol>' +
+  '<p class="dnote">Lanzadera tomará la temperatura sola. También funciona con HWiNFO u OpenHardwareMonitor abiertos.</p>';
+
 function uptime(s) {
   const d = Math.floor(s / 86400);
   const hh = Math.floor((s % 86400) / 3600);
@@ -133,9 +139,7 @@ export function createGadget() {
           .join('')
       );
     }
-    if (key === 'temp-none') {
-      return '<p class="dnote">Este equipo no comparte temperaturas con Windows sin permisos especiales. La de la tarjeta gráfica y la de los discos SSD aparecen cuando su controlador las informa.</p>';
-    }
+    if (key === 'cpu-off') return CPU_TEMP_HELP;
     if (key.startsWith('t:')) {
       const s = (now.sensors || []).find((x) => 't:' + x.key === key);
       if (!s) return '';
@@ -161,7 +165,10 @@ export function createGadget() {
     for (const d of [useDrawer, tempDrawer, ioDrawer]) {
       const on = openKey && items.get(openKey)?.drawer === d;
       d.classList.toggle('open', !!on);
-      if (on && last) d.firstChild.innerHTML = detail(openKey, last);
+      if (on && last) {
+        const html = detail(openKey, last);
+        if (d.firstChild.innerHTML !== html) d.firstChild.innerHTML = html;
+      }
     }
     for (const [k, it] of items) it.el.classList.toggle('active', k === openKey);
   }
@@ -216,18 +223,20 @@ export function createGadget() {
     // Temperaturas
     const sensors = now.sensors || [];
     const keys = new Set(sensors.map((s) => 't:' + s.key));
-    if (!sensors.length) keys.add('temp-none');
+    const noCpu = !sensors.some((s) => s.key === 'cpu');
+    if (noCpu) keys.add('cpu-off');
     for (const [k, it] of items) {
-      if ((k.startsWith('t:') || k === 'temp-none') && !keys.has(k)) {
+      if ((k.startsWith('t:') || k === 'cpu-off') && !keys.has(k)) {
         it.el.remove();
         items.delete(k);
       }
     }
-    if (!sensors.length) {
-      const it = item('temp-none', temps);
-      it.viz.innerHTML = gaugeSVG({ value: NaN, zones: { caution: 80, critical: 95 }, min: 20, max: 110, unit: '' });
-      it.title.textContent = 'Sin sensores';
-      it.sub.textContent = 'Pasa el puntero';
+    if (noCpu) {
+      const it = item('cpu-off', temps);
+      if (!it.viz.firstChild) it.viz.innerHTML = gaugeSVG({ value: NaN, zones: { caution: 80, critical: 95 }, min: 20, max: 110, unit: '' });
+      it.title.textContent = 'Procesador';
+      it.sub.textContent = 'Cómo verla';
+      temps.prepend(it.el);
     }
     for (const s of sensors) {
       const hst = (tempHist[s.key] ||= []);

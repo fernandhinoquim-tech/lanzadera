@@ -17,9 +17,11 @@ function zoneOf(v, caution, critical) {
 
 // Sensores de temperatura con sus zonas: amarillo (cuidado) y rojo (crítico). Se usan los
 // límites que informa cada componente cuando existen; si no, valores habituales.
-function buildSensors({ temps, gpuTemp, gpuName, disks }) {
+function buildSensors({ temps, cpuTemp, gpuTemp, gpuName, disks }) {
   const list = [];
-  if (temps?.length) {
+  if (cpuTemp?.value > 0) {
+    list.push({ key: 'cpu', label: 'Procesador', value: cpuTemp.value, caution: 80, critical: 95, source: `Sensor del procesador (vía ${cpuTemp.src || 'LibreHardwareMonitor'})`, limits: 'habituales', real: true });
+  } else if (temps?.length) {
     list.push({ key: 'cpu', label: 'Procesador', value: Math.max(...temps), caution: 80, critical: 95, source: 'Sensor térmico de la placa (ACPI)', limits: 'habituales' });
   }
   if (gpuTemp) {
@@ -86,9 +88,13 @@ function procTotals() {
 
 class Metrics extends EventEmitter {
   // config: devuelve la configuración del monitor (para saber si avisar temperaturas críticas).
-  constructor({ config = () => ({}) } = {}) {
+  // cpuReader: lee la temperatura real del procesador (LibreHardwareMonitor) si está disponible.
+  constructor({ config = () => ({}), cpuReader = null } = {}) {
     super();
     this.config = config;
+    this.cpuReader = cpuReader;
+    this.lhmTemp = null;
+    this.ticks = 0;
     this.critCount = {};
     this.lastAlert = {};
     this.subs = new Map();
@@ -185,6 +191,12 @@ class Metrics extends EventEmitter {
   }
 
   tick() {
+    this.ticks++;
+    if (isWin && this.cpuReader && this.ticks % 2 === 0) {
+      this.cpuReader()
+        .then((t) => (this.lhmTemp = t))
+        .catch(() => (this.lhmTemp = null));
+    }
     const cur = cpuSnapshot();
     const cores = cur.map((c, i) => {
       const p = this.prevCpu?.[i];
@@ -202,6 +214,7 @@ class Metrics extends EventEmitter {
     let gpu = null;
     let extra = {};
     let gpuTemp = null;
+    let cpuTemp = null;
     let diskTemps = [];
     if (isWin) {
       const w = this.win && Date.now() - this.winAt < 5000 ? this.win : null;
@@ -211,6 +224,8 @@ class Metrics extends EventEmitter {
         gpu = w.gpu;
         extra = { mhz: w.cpu?.mhz || null, baseMhz: w.cpu?.base || null, temps: w.temps || [], battery: w.battery, drives: w.drives || [], procs: w.procs };
         diskTemps = Array.isArray(w.dtemps) ? w.dtemps : [];
+        if (w.ctemp?.t > 0) cpuTemp = { value: w.ctemp.t, src: w.ctemp.src };
+        if (this.lhmTemp?.value > 0) cpuTemp = { value: this.lhmTemp.value, src: this.lhmTemp.src };
         if (w.gperf?.t > 0) {
           gpuTemp = { value: w.gperf.t, warn: w.gperf.warn };
           gpu = { ...(gpu || {}), temp: Math.round(w.gperf.t), fanRpm: w.gperf.fan || null };
@@ -251,7 +266,8 @@ class Metrics extends EventEmitter {
       host: os.hostname(),
       ...extra,
     };
-    sample.sensors = buildSensors({ temps: sample.temps, gpuTemp, gpuName: gpu?.name, disks: diskTemps });
+    sample.sensors = buildSensors({ temps: sample.temps, cpuTemp, gpuTemp, gpuName: gpu?.name, disks: diskTemps });
+    sample.cpuTempSource = cpuTemp ? cpuTemp.src : sample.temps?.length ? 'acpi' : null;
     this.checkAlerts(sample.sensors);
     const push = (k, v) => {
       const a = this.hist[k];

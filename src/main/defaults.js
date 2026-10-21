@@ -32,7 +32,7 @@ function baseConfig() {
       overTaskbar: false,
       margin: 10,
       idle: 'compact', // normal | compact | mini | hidden
-      windows: 'reserve', // reserve | dodge | top: qué hace con las ventanas abiertas
+      windows: 'reserve', // reserve | dodge | top | desktop: qué hace con las ventanas abiertas
       showDelay: 120,
       hideDelay: 450,
     },

@@ -12,7 +12,7 @@ function createTray(ctx) {
     const menu = Menu.buildFromTemplate([
       { label: 'Buscar…', accelerator: cfg.hotkeys.search || undefined, click: () => ctx.search.show() },
       { label: ctx.docks.hidden ? 'Mostrar el dock' : 'Ocultar el dock', click: () => ctx.toggleDock() },
-      { label: 'Botón en la barra de tareas', type: 'checkbox', checked: cfg.position.idle === 'taskbar', click: () => ctx.store.patch({ position: { idle: cfg.position.idle === 'taskbar' ? 'normal' : 'taskbar' } }) },
+      { label: 'Botón en la barra de tareas', type: 'checkbox', checked: cfg.position.taskbarButton, click: () => ctx.store.patch({ position: { taskbarButton: !cfg.position.taskbarButton } }) },
       {
         label: 'Espacio de trabajo',
         submenu: cfg.workspaces.map((w) => ({

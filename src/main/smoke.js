@@ -1,7 +1,7 @@
 // Prueba automática: abre todas las vistas, toma capturas y verifica funciones clave.
 // Se activa con la variable LANZADERA_SMOKE=<carpeta de salida>.
 const { app, BrowserWindow, screen } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -399,24 +399,47 @@ async function run(ctx) {
       return { count: res.count, groups: res.groups.map((g) => [g.name, g.items.map((i) => i.name)]) };
     });
     // Botón en la barra de tareas: cada clic en el icono despliega u oculta la barra.
+    // ¿La ventana a está por encima de la ventana b? (recorre el orden de Windows desde a hacia abajo)
+    const zAbove = (a, b) =>
+      new Promise((resolve) => {
+        const ps = `Add-Type -Namespace Lz -Name Z -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint c);'; $h = [IntPtr]${a}; for ($n = 0; $n -lt 5000 -and $h -ne [IntPtr]::Zero; $n++) { $h = [Lz.Z]::GetWindow($h, 2); if ($h -eq [IntPtr]${b}) { 'si'; exit } }; 'no'`;
+        execFile('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true, timeout: 20000 }, (err, out) => resolve(String(out || '').trim() === 'si'));
+      });
+    // La barra al fondo del escritorio y el botón: un clic la trae encima de todo, otro la devuelve atrás.
     await step('boton-barra-tareas', async () => {
-      ctx.store.patch({ position: { idle: 'taskbar', windows: 'top' } });
+      ctx.store.patch({ position: { windows: 'desktop', idle: 'compact', taskbarButton: true } });
       await wait(1500);
       const btn = ctx.taskbarButton.win;
       if (!btn) throw new Error('No se creó el botón de la barra de tareas');
+      const dock = dockWin();
+      const db = dock.getBounds();
+      const cover = new BrowserWindow({ x: db.x, y: db.y - 200, width: db.width, height: db.height + 200, show: false, title: 'Ventana de trabajo' });
+      cover.loadURL('data:text/html,<body style="background:%23345">Trabajo</body>');
+      cover.show();
+      cover.focus();
+      await wait(1500);
+      const { hwndOf } = require('./shell');
+      const [hd, hc] = [hwndOf(dock), hwndOf(cover)];
       const expanded = () => dockEval(`document.getElementById('stage').classList.contains('expanded')`);
-      const info = { minimized: btn.isMinimized(), inTaskbar: !btn.isDestroyed(), before: await expanded() };
+      const info = { minimized: btn.isMinimized(), before: await expanded(), aboveBefore: await zAbove(hd, hc) };
       btn.restore();
-      await wait(1200);
+      await wait(1500);
       info.afterFirstClick = await expanded();
-      await shot(dockWin(), '43-boton-barra-tareas');
+      info.topFirst = dock.isAlwaysOnTop();
+      info.aboveFirst = await zAbove(hd, hc);
+      await shot(dock, '43-boton-barra-tareas');
       btn.restore();
-      await wait(1200);
+      await wait(1500);
       info.afterSecondClick = await expanded();
-      ctx.store.patch({ position: { idle: 'normal' } });
+      info.topSecond = dock.isAlwaysOnTop();
+      info.visibleSecond = dock.isVisible();
+      info.aboveSecond = await zAbove(hd, hc);
+      cover.destroy();
+      ctx.store.patch({ position: { taskbarButton: false } });
       await wait(800);
       info.removed = !ctx.taskbarButton.win;
-      if (info.before || !info.afterFirstClick || info.afterSecondClick || !info.removed) throw new Error('El botón no alternó la barra: ' + JSON.stringify(info));
+      const ok = !info.before && info.afterFirstClick && info.topFirst && info.aboveFirst && !info.afterSecondClick && !info.topSecond && info.visibleSecond && !info.aboveSecond && info.removed;
+      if (!ok) throw new Error('El botón no trajo la barra al frente y de vuelta al fondo: ' + JSON.stringify(info));
       return info;
     });
     // Último paso de Windows: al cerrar, el ayudante suelta la franja aunque nadie se lo pida.

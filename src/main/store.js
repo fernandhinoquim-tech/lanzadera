@@ -93,7 +93,13 @@ function sanitizeConfig(c) {
   const pos = c.position;
   if (!['bottom', 'top', 'left', 'right'].includes(pos.edge)) pos.edge = 'bottom';
   if (!['start', 'center', 'end'].includes(pos.align)) pos.align = 'center';
-  if (!['normal', 'compact', 'mini', 'hidden', 'taskbar'].includes(pos.idle)) pos.idle = 'compact';
+  // 1.4.0 y 1.4.1 tenían el botón como modo de reposo (la barra quedaba oculta): ahora es aparte.
+  if (pos.idle === 'taskbar') {
+    pos.idle = 'compact';
+    pos.taskbarButton = true;
+  }
+  if (!['normal', 'compact', 'mini', 'hidden'].includes(pos.idle)) pos.idle = 'compact';
+  pos.taskbarButton = pos.taskbarButton === true;
   if (!['reserve', 'dodge', 'top', 'desktop'].includes(pos.windows)) pos.windows = 'reserve';
   pos.margin = Math.max(0, Math.min(80, Number(pos.margin) || 0));
   c.clipboard.max = Math.max(5, Math.min(200, Number(c.clipboard.max) || 40));

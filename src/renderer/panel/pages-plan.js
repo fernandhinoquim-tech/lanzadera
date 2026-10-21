@@ -130,22 +130,22 @@ export function accesosPage() {
 // Mini barra de tareas que muestra dónde queda el botón de Lanzadera.
 function taskbarSketch() {
   const win = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8.4" height="8.4" rx="1" fill="#0a84ff"/><rect x="12.6" y="3" width="8.4" height="8.4" rx="1" fill="#0a84ff"/><rect x="3" y="12.6" width="8.4" height="8.4" rx="1" fill="#0a84ff"/><rect x="12.6" y="12.6" width="8.4" height="8.4" rx="1" fill="#0a84ff"/></svg>';
-  return h('div.tb-sketch', { html: `<div class="tb-bar"><span class="tb-btn">${win}</span><span class="tb-btn tb-lanz"><img src="lanz://asset/icon.png" alt=""></span><span class="tb-btn tb-dim"></span><span class="tb-btn tb-dim"></span></div><div class="tb-tip">Un clic: se despliega la barra · otro clic: se oculta</div>` });
+  return h('div.tb-sketch', { html: `<div class="tb-bar"><span class="tb-btn">${win}</span><span class="tb-btn tb-lanz"><img src="lanz://asset/icon.png" alt=""></span><span class="tb-btn tb-dim"></span><span class="tb-btn tb-dim"></span></div><div class="tb-tip">Un clic: la barra encima de todo · otro clic: vuelve a su lugar</div>` });
 }
 
 function taskbarNews() {
-  const on = P.config.position.idle === 'taskbar';
+  const on = P.config.position.taskbarButton;
   return h('div.news-hero' + (on ? '.on' : ''),
     taskbarSketch(),
     h('div.nh-text',
       h('b', { text: 'Botón en la barra de tareas' }),
       on
         ? h('span', { html: 'Activado. Busca el icono de Lanzadera en la barra de tareas: <b>clic derecho › Anclar a la barra de tareas</b> y arrástralo junto al botón de Windows.' })
-        : h('span', { text: 'Lanzadera queda como un icono junto al botón de Windows. Un clic despliega la barra encima de todo, sin importar qué ventanas tengas abiertas; otro clic, Esc o un clic fuera la ocultan.' }),
+        : h('span', { text: 'Tu barra sigue donde está, por ejemplo al fondo del escritorio. Un clic en su icono, junto al botón de Windows, la trae encima de todo para elegir lo que quieras sin minimizar tus ventanas; otro clic, Esc o un clic fuera la devuelven a su lugar.' }),
       h('div.nh-actions',
         on
-          ? button('Volver a la barra siempre visible', () => patch({ position: { idle: 'normal' } }))
-          : button('Activar el botón', () => patch({ position: { idle: 'taskbar' } }), { primary: true, icon: 'pin' })
+          ? button('Quitar el botón', () => patch({ position: { taskbarButton: false } }))
+          : button('Activar el botón', () => patch({ position: { taskbarButton: true } }), { primary: true, icon: 'pin' })
       )
     )
   );

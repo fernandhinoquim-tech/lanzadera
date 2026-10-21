@@ -685,6 +685,9 @@ public static class LzShell {
   [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
   [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] static extern IntPtr GetTopWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
   [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
   [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
   [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
@@ -756,7 +759,8 @@ public static class LzShell {
     IntPtr h = GetForegroundWindow();
     if (h == IntPtr.Zero || h == GetShellWindow()) return "{\"h\":0,\"desk\":1}";
     string c = ClassOf(h);
-    if (c == "Progman" || c == "WorkerW" || c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return "{\"h\":" + h.ToInt64() + ",\"desk\":1}";
+    if (c == "Progman" || c == "WorkerW") return "{\"h\":" + h.ToInt64() + ",\"desk\":1}";
+    if (c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd") return "{\"h\":" + h.ToInt64() + ",\"tray\":1,\"shell\":1}";
     uint pid;
     GetWindowThreadProcessId(h, out pid);
     bool shell = c == "Windows.UI.Core.CoreWindow" || c == "XamlExplorerHostIslandWindow" || c == "TopLevelWindowForOverflowXamlIsland" || c == "NotifyIconOverflowWindow";
@@ -906,6 +910,21 @@ public static class LzShell {
     }
   }
 
+  // Deja la ventana detras de todas las demas, justo delante del escritorio (Progman, o el
+  // WorkerW que tiene los iconos cuando un fondo animado los movio).
+  static void Back(IntPtr h) {
+    if (!IsWindow(h)) return;
+    IntPtr last = IntPtr.Zero;
+    for (IntPtr w = GetTopWindow(IntPtr.Zero); w != IntPtr.Zero; w = GetWindow(w, 2)) {
+      if (w == h || !IsWindowVisible(w)) continue;
+      string c = ClassOf(w);
+      if (c == "Progman" || (c == "WorkerW" && FindWindowEx(w, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero)) break;
+      if ((GetWindowLong(w, -20) & 0x8) != 0) continue;
+      last = w;
+    }
+    if (last != IntPtr.Zero) SetWindowPos(h, last, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0200);
+  }
+
   static void Handle(string cmd) {
     string[] a = cmd.Split(' ');
     try {
@@ -917,6 +936,7 @@ public static class LzShell {
       } else if (a[0] == "unbar") Unbar(h);
       else if (a[0] == "focus") Focus(h);
       else if (a[0] == "min") ShowWindow(h, 6);
+      else if (a[0] == "back") Back(h);
       else if (a[0] == "noanim") { int one = 1; DwmSetWindowAttribute(h, 3, ref one, 4); }
       else if (a[0] == "wins") winsNow = true;
     } catch (Exception e) {

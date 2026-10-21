@@ -67,7 +67,7 @@ function draw(box) {
     ),
     ...section('Otras opciones',
       card({ icon: 'cpu', title: '¿Ya usas HWiNFO u OpenHardwareMonitor?', desc: 'También sirven: déjalo abierto. En HWiNFO, entra a <b>Sensors › Configure › HWiNFO Gadget</b>, activa <b>Enable reporting to Gadget</b> y marca la temperatura del procesador con <b>Report value in Gadget</b>.' }),
-      card({ icon: 'shield-check', title: 'Por qué hace falta', desc: 'Windows protege el sensor del procesador: solo lo leen programas con permisos de administrador y un controlador especial. Lanzadera no pide esos permisos; solo lee lo que LibreHardwareMonitor publica en tu equipo (127.0.0.1).' })
+      card({ icon: 'shield-check', title: '¿Dónde doy los permisos?', desc: 'Windows protege el sensor del procesador: solo lo leen programas con permisos de administrador y un controlador especial. Esos permisos se los das a LibreHardwareMonitor cuando Windows te pregunta al abrirlo (paso 2) y al instalar PawnIO. Lanzadera solo lee lo que él publica en tu equipo (127.0.0.1).' })
     )
   );
 }

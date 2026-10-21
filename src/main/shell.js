@@ -105,8 +105,9 @@ class ShellBridge extends EventEmitter {
       fg.own = fg.pid === process.pid;
       fg.rect = toDip(fg.r);
       this.fg = fg;
-      if (fg.desk || fg.shell) this.lastExternal = null;
-      else if (!fg.own && fg.h) this.lastExternal = fg;
+      // Un clic en la barra de tareas (fg.tray) no cambia cuál era la ventana de trabajo.
+      if (fg.desk || (fg.shell && !fg.tray)) this.lastExternal = null;
+      else if (!fg.own && !fg.tray && fg.h) this.lastExternal = fg;
       let full = null;
       if (fg.full && fg.m) full = String(screen.getDisplayMatching(toDip(fg.m)).id);
       if (!fg.own) this.setFullscreen(full);
@@ -187,6 +188,12 @@ class ShellBridge extends EventEmitter {
     if (!hwnd) return;
     if (this.child) this.send(`noanim ${hwnd}`);
     else this.once('ready', () => this.send(`noanim ${hwnd}`));
+  }
+
+  // Detrás de todas las ventanas, pero delante del escritorio.
+  sendBack(win) {
+    const hwnd = hwndOf(win);
+    if (hwnd) this.send(`back ${hwnd}`);
   }
 
   minimize(hwnd) {

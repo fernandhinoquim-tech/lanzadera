@@ -250,7 +250,6 @@ export function dockMenu(x, y, index = null) {
         ['compact', 'Compacta (crece al pasar)'],
         ['mini', 'Mini (una línea)'],
         ['hidden', 'Ocultar automáticamente'],
-        ['taskbar', 'Botón en la barra de tareas'],
       ].map(([v, l]) => ({ label: l, checked: pos.idle === v, onClick: () => set({ position: { idle: v } }) })),
     },
     {
@@ -263,6 +262,7 @@ export function dockMenu(x, y, index = null) {
         ['top', 'Quedar encima de todo'],
       ].map(([v, l]) => ({ label: l, checked: pos.windows === v, onClick: () => set({ position: { windows: v } }) })),
     },
+    { label: 'Botón en la barra de tareas', icon: 'pin', checked: pos.taskbarButton, onClick: () => set({ position: { taskbarButton: !pos.taskbarButton } }) },
     {
       label: 'Tamaño',
       icon: 'scaling',

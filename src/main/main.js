@@ -197,7 +197,7 @@ function announceTaskbarButton() {
 }
 
 // Versión con novedades que conviene mostrar al actualizar.
-const NEWS_VERSION = '1.4.1';
+const NEWS_VERSION = '1.4.2';
 
 function withTimeout(promise, ms, fallback) {
   return Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);

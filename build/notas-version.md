@@ -1,8 +1,10 @@
 ## Novedades
 
-- **El botón de la barra de tareas, a un clic.** Al actualizar se abre «Novedades» con un botón **Activar**. También está en el icono junto al reloj (casilla «Botón en la barra de tareas») y en clic derecho en la barra › Al no usarla. Al activarlo, el icono parpadea en la barra de tareas y un aviso explica cómo anclarlo junto al botón de Windows.
-- **El botón anclado es solo de la barra.** Ya no se mezcla con la ventana de configuración, y si Lanzadera está cerrada, el icono anclado la abre.
-- **Guía para la temperatura del procesador.** Windows protege ese sensor; ahora Lanzadera detecta en qué paso vas (LibreHardwareMonitor cerrado, abierto sin su servidor web, o sin el controlador PawnIO) y te dice qué falta. La guía (Configuración › Widgets › Temperatura del procesador, o clic en el medidor del procesador) se marca sola.
+- **El botón de la barra de tareas, como lo pediste.** Tu barra se queda donde la tienes (por ejemplo, al fondo del escritorio, detrás de tus ventanas). Un clic en el icono de Lanzadera, junto al botón de Windows, la trae encima de todo, desplegada, para elegir lo que quieras sin minimizar nada. Otro clic, Esc o un clic fuera la devuelven a su lugar y vuelves a la ventana en la que estabas.
+- Si ya lo habías activado en la 1.4.0 o 1.4.1, la barra vuelve a verse en el escritorio y el botón sigue activo.
+- Se activa en Configuración › Posición, con clic derecho en la barra › «Botón en la barra de tareas», o desde el icono junto al reloj.
+- Al hacer clic en la barra de tareas, la barra «al fondo» ya no salta encima de tus ventanas.
+- La guía de la temperatura del procesador explica dónde se dan los permisos (a LibreHardwareMonitor, cuando Windows lo pregunta al abrirlo).
 
 ## Cómo instalar
 

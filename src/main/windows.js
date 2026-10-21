@@ -305,11 +305,13 @@ class DockManager {
     }
   }
 
+  // ¿Está activo el botón en la barra de tareas?
   taskbarMode() {
-    return this.store.get().position.idle === 'taskbar';
+    return this.store.get().position.taskbarButton === true;
   }
 
-  // Botón en la barra de tareas: despliega la barra encima de todo o la vuelve a ocultar.
+  // Botón en la barra de tareas: trae la barra encima de todo, desplegada, para elegir algo sin
+  // minimizar las ventanas; al soltarla vuelve a su lugar (al fondo, si ese es su modo).
   summon(open) {
     this.summoned = !!open;
     for (const w of this.all()) {
@@ -322,13 +324,30 @@ class DockManager {
       }
       if (!w.webContents.isLoading()) w.webContents.send('dock:summon', !!open);
     }
-    if (!open) this.applyWindowsMode();
+    if (open) return;
+    this.applyVisibility();
+    this.applyWindowsMode();
+    if (this.windowsMode() !== 'desktop') return;
+    // Otra vez detrás de las ventanas; se repite por si Windows la activa al minimizarse el botón.
+    const back = () => this.windowsMode() === 'desktop' && !this.summoned && this.all().forEach((w) => this.shell?.sendBack(w));
+    back();
+    clearTimeout(this.backTimer);
+    this.backTimer = setTimeout(back, 250);
   }
 
-  // Clic en el botón: si la barra acaba de cerrarse por ese mismo clic (perdió el foco), no se reabre.
-  summonToggle() {
+  // Esc o segundo clic en el botón: la barra vuelve a su lugar y se regresa a la ventana de antes.
+  dismiss() {
     if (this.summoned) this.summon(false);
+    const prev = this.shell?.lastExternal;
+    if (prev?.h) this.shell.focus(prev.h);
+  }
+
+  // Clic en el botón: si la barra acaba de cerrarse por ese mismo clic (perdió el foco), no se
+  // reabre: se vuelve a la ventana de antes.
+  summonToggle() {
+    if (this.summoned) this.dismiss();
     else if (Date.now() - this.lastBlurHide > 450) this.summon(true);
+    else this.dismiss();
   }
 
   // Al fondo: al ir al escritorio (clic en él o Win + D) el dock vuelve a quedar a la vista,
@@ -352,7 +371,7 @@ class DockManager {
   }
 
   toggle(force) {
-    if (this.taskbarMode()) return this.summon(force === undefined ? !this.summoned : !!force);
+    if (this.summoned) return this.summon(false);
     this.hidden = force === undefined ? !this.hidden : !force;
     this.applyVisibility();
     this.applyWindowsMode();

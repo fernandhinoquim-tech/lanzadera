@@ -113,6 +113,8 @@ const mockScript = (state) => `
     running: async () => state.config.workspaces[0].items.filter((i) => i.type === 'app').slice(0, 2).map((i) => i.id),
     onRunning: on('running'),
     onDodge: on('dodge'),
+    onSummon: on('summon'),
+    summon: () => {},
     reportBar: () => {},
     categorize: async (items) => items.map(() => 'Oficina'),
     planApply: async () => ({ added: 2, groups: 3 }),

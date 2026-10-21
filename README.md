@@ -21,8 +21,9 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 |---|---|---|
 | 🔍 | **Efecto lupa** | Los iconos crecen al pasar el mouse. En modo *compacto* la barra es pequeña y se agranda al tocarla. |
 | 📍 | **Cualquier borde** | Abajo, arriba, izquierda o derecha; alineada al inicio, centro o final; en una o en todas las pantallas. |
-| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color), oculta (aparece al llevar el mouse al borde) o **botón en la barra de tareas** (un clic en su icono, junto al botón de Windows, la despliega encima de todo; se activa desde el icono junto al reloj o con clic derecho › Al no usarla). |
+| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color) u oculta (aparece al llevar el mouse al borde). |
 | 🪟 | **No tapa tus ventanas** | Reserva su franja como la barra de tareas: las ventanas maximizadas terminan justo arriba. También puede esconderse cuando una ventana lo toca, quedar **al fondo en el escritorio** (detrás de tus ventanas) o encima de todo. |
+| 📌 | **Botón en la barra de tareas** | Un clic en el icono de Lanzadera, junto al botón de Windows, trae la barra encima de todo sin minimizar tus ventanas; otro clic la devuelve a su lugar. Se activa en Configuración › Posición o con clic derecho en la barra. |
 | ⭐ | **Barra en dos zonas** | Primero tus programas más usados (según el uso real en Windows) y después tus grupos de accesos directos. |
 | 🗂️ | **Grupos** | Un icono que abre muchos más, en **abanico**, **cuadrícula** o **lista**. Suelta un icono sobre otro para crear uno, o arma grupos por tema con los accesos de tu escritorio. «Abrir todo» lanza el grupo completo. |
 | 🟢 | **Programas abiertos** | Un punto marca lo que está abierto; un clic vuelve a su ventana (o la minimiza si ya estaba al frente). `Mayús + clic` abre otra. |

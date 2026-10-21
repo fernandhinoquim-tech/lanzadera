@@ -141,6 +141,14 @@ test('la migración saca las métricas de la barra y activa el monitor del escri
   assert.deepEqual(c.workspaces[0].items.map((i) => i.widget || i.type), ['app', 'separator', 'clock']);
 });
 
+test('el botón de la barra de tareas deja de ser un modo de reposo', () => {
+  const old = sanitizeConfig(deepMerge(baseConfig(), { position: { idle: 'taskbar', windows: 'desktop' } }));
+  assert.equal(old.position.idle, 'compact', 'la barra vuelve a verse en el escritorio');
+  assert.equal(old.position.taskbarButton, true, 'el botón sigue activo');
+  assert.equal(old.position.windows, 'desktop');
+  assert.equal(sanitizeConfig(deepMerge(baseConfig(), {})).position.taskbarButton, false);
+});
+
 test('las ventanas abiertas se reconocen por id de aplicación o por ejecutable', () => {
   const wins = [
     { h: 1, p: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', a: 'Chrome' },

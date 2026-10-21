@@ -1,0 +1,898 @@
+{
+  "platform": "win32",
+  "release": "10.0.26100",
+  "version": "1.4.2",
+  "steps": [
+    {
+      "name": "dock-carga",
+      "ok": true,
+      "ms": 2224,
+      "info": {
+        "items": 18,
+        "bounds": {
+          "x": 0,
+          "y": 158,
+          "width": 1024,
+          "height": 562
+        }
+      }
+    },
+    {
+      "name": "barra-inicial",
+      "ok": true,
+      "ms": 0,
+      "info": [
+        "Explorador de archivos",
+        "Google Chrome",
+        "Feedback Hub",
+        "Terminal",
+        "|",
+        "[Oficina: Notepad]",
+        "[Utilidades: Calculator, Snipping Tool, Paint, Administrador de tareas, Panel de control, Este equipo, Configuración de Windows]",
+        "[Internet: Firefox, Microsoft Edge]",
+        "[Otros: Unity Hub, R 4.6.1]",
+        "|",
+        "Descargas",
+        "Documentos",
+        "Recientes",
+        "Estante",
+        "Portapapeles",
+        "Buscar",
+        "Espacios",
+        "Papelera"
+      ]
+    },
+    {
+      "name": "dock-lupa",
+      "ok": true,
+      "ms": 1232
+    },
+    {
+      "name": "grupo",
+      "ok": true,
+      "ms": 1204
+    },
+    {
+      "name": "abanico-descargas",
+      "ok": true,
+      "ms": 1192
+    },
+    {
+      "name": "calendario",
+      "ok": true,
+      "ms": 1206
+    },
+    {
+      "name": "portapapeles",
+      "ok": true,
+      "ms": 1207
+    },
+    {
+      "name": "espacios",
+      "ok": true,
+      "ms": 1191
+    },
+    {
+      "name": "ordenar-rapido",
+      "ok": true,
+      "ms": 2024
+    },
+    {
+      "name": "panel-rendimiento",
+      "ok": true,
+      "ms": 3853
+    },
+    {
+      "name": "menu",
+      "ok": true,
+      "ms": 468
+    },
+    {
+      "name": "borde-left",
+      "ok": true,
+      "ms": 2125
+    },
+    {
+      "name": "borde-top",
+      "ok": true,
+      "ms": 2133
+    },
+    {
+      "name": "borde-right",
+      "ok": true,
+      "ms": 2126
+    },
+    {
+      "name": "modo-mini",
+      "ok": true,
+      "ms": 1818
+    },
+    {
+      "name": "estilo-iconos-diseno",
+      "ok": true,
+      "ms": 2857
+    },
+    {
+      "name": "al-fondo",
+      "ok": true,
+      "ms": 1708,
+      "info": {
+        "onTop": false,
+        "back": true
+      }
+    },
+    {
+      "name": "metricas",
+      "ok": true,
+      "ms": 9000,
+      "info": {
+        "cpu": 4,
+        "cores": 4,
+        "mem": 19,
+        "gpu": {
+          "util": 57.15,
+          "mem": 0,
+          "memTotal": 0,
+          "name": "Microsoft Hyper-V Video"
+        },
+        "net": {
+          "rx": 2437.02,
+          "tx": 879.8
+        },
+        "disk": {
+          "r": 2020,
+          "w": 155562.14,
+          "busy": 0.62
+        },
+        "mhz": 3240.8,
+        "temps": [],
+        "sensors": [],
+        "raw": {
+          "gperf": null,
+          "dtemps": []
+        },
+        "battery": null,
+        "drives": [
+          {
+            "name": "C:\\",
+            "label": "Windows",
+            "total": 160939618304,
+            "free": 33774006272
+          },
+          {
+            "name": "D:\\",
+            "label": "Temporary Storage",
+            "total": 161059172352,
+            "free": 157164752896
+          }
+        ],
+        "procs": {
+          "count": 146,
+          "top": [
+            [
+              "dwm",
+              1.55,
+              84873216
+            ],
+            [
+              "electron",
+              0.39,
+              513863680
+            ],
+            [
+              "powershell",
+              0.19,
+              199974912
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "monitor-flotante",
+      "ok": true,
+      "ms": 6512,
+      "info": {
+        "items": [
+          "cpu",
+          "mem",
+          "gpu",
+          "cpu-off",
+          "net",
+          "disk"
+        ],
+        "temp": true
+      }
+    },
+    {
+      "name": "monitor-completo",
+      "ok": true,
+      "ms": 3981
+    },
+    {
+      "name": "panel/bienvenida",
+      "ok": true,
+      "ms": 1890
+    },
+    {
+      "name": "panel/inicio",
+      "ok": true,
+      "ms": 1758
+    },
+    {
+      "name": "panel/elementos",
+      "ok": true,
+      "ms": 1740
+    },
+    {
+      "name": "panel/accesos",
+      "ok": true,
+      "ms": 4737
+    },
+    {
+      "name": "panel/novedades",
+      "ok": true,
+      "ms": 4732
+    },
+    {
+      "name": "panel/temperatura",
+      "ok": true,
+      "ms": 4730
+    },
+    {
+      "name": "panel/apariencia",
+      "ok": true,
+      "ms": 1729
+    },
+    {
+      "name": "panel/posicion",
+      "ok": true,
+      "ms": 1733
+    },
+    {
+      "name": "panel/comportamiento",
+      "ok": true,
+      "ms": 1726
+    },
+    {
+      "name": "panel/espacios",
+      "ok": true,
+      "ms": 1734
+    },
+    {
+      "name": "panel/iconos",
+      "ok": true,
+      "ms": 4731
+    },
+    {
+      "name": "panel/organizador",
+      "ok": true,
+      "ms": 1727
+    },
+    {
+      "name": "panel/widgets",
+      "ok": true,
+      "ms": 1739
+    },
+    {
+      "name": "panel/respaldo",
+      "ok": true,
+      "ms": 1725
+    },
+    {
+      "name": "panel/acerca",
+      "ok": true,
+      "ms": 1745
+    },
+    {
+      "name": "panel/agregar",
+      "ok": true,
+      "ms": 4727
+    },
+    {
+      "name": "bienvenida-pasos",
+      "ok": true,
+      "ms": 5765
+    },
+    {
+      "name": "panel-editor-icono",
+      "ok": true,
+      "ms": 2040
+    },
+    {
+      "name": "buscador",
+      "ok": true,
+      "ms": 3030
+    },
+    {
+      "name": "organizador",
+      "ok": true,
+      "ms": 38,
+      "info": {
+        "categories": {
+          "Comprimidos": 1,
+          "Documentos": 1,
+          "Hojas de cálculo": 1,
+          "Imágenes": 1,
+          "Música": 1,
+          "Otros": 1,
+          "PDF": 1,
+          "Videos": 1
+        },
+        "afterUndo": [
+          "Acceso.lnk",
+          "archivo.zip",
+          "cancion.mp3",
+          "foto.jpg",
+          "informe.pdf",
+          "notas.txt",
+          "raro.xyz",
+          "tabla.xlsx",
+          "video.mp4"
+        ]
+      }
+    },
+    {
+      "name": "describir-rutas",
+      "ok": true,
+      "ms": 0,
+      "info": [
+        {
+          "type": "folder",
+          "name": "runneradmin",
+          "target": "C:\\Users\\runneradmin"
+        },
+        {
+          "type": "file",
+          "name": "smoke.js",
+          "target": "D:\\a\\lanzadera\\lanzadera\\src\\main\\smoke.js"
+        }
+      ]
+    },
+    {
+      "name": "apps-windows",
+      "ok": true,
+      "ms": 605,
+      "info": {
+        "count": 126,
+        "sample": [
+          {
+            "name": "7-Zip File Manager",
+            "appId": "{6D809377-6AF0-444B-8957-A3773F02200E}\\7-Zip\\7zFM.exe",
+            "path": "C:\\Program Files\\7-Zip\\7zFM.exe"
+          },
+          {
+            "name": "Anaconda PowerShell Prompt",
+            "appId": "anaconda.PowerShell.Miniconda.base",
+            "path": ""
+          },
+          {
+            "name": "Anaconda Prompt",
+            "appId": "anaconda.CmdExe.Miniconda.base",
+            "path": ""
+          },
+          {
+            "name": "Application Stack Builder",
+            "appId": "{6D809377-6AF0-444B-8957-A3773F02200E}\\PostgreSQL\\17\\bin\\stackbuilder.exe",
+            "path": "C:\\Program Files\\PostgreSQL\\17\\bin\\stackbuilder.exe"
+          },
+          {
+            "name": "Application Verifier (WOW)",
+            "appId": "{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}\\appverif.exe",
+            "path": "C:\\Windows\\SysWOW64\\appverif.exe"
+          },
+          {
+            "name": "Application Verifier (X64)",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\appverif.exe",
+            "path": "C:\\Windows\\System32\\appverif.exe"
+          },
+          {
+            "name": "Azure Arc Setup",
+            "appId": "{F38BF404-1D43-42F2-9305-67DE0B28FC23}\\AzureArcSetup\\ArcSetup\\AzureArcSetup.exe",
+            "path": "C:\\Windows\\AzureArcSetup\\ArcSetup\\AzureArcSetup.exe"
+          },
+          {
+            "name": "Azure Cosmos DB Emulator",
+            "appId": "{6D809377-6AF0-444B-8957-A3773F02200E}\\Azure Cosmos DB Emulator\\Microsoft.Azure.Cosmos.Emulator.exe",
+            "path": "C:\\Program Files\\Azure Cosmos DB Emulator\\Microsoft.Azure.Cosmos.Emulator.exe"
+          },
+          {
+            "name": "Blend for Visual Studio",
+            "appId": "Blend.3237b29e",
+            "path": ""
+          },
+          {
+            "name": "Calculator",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\win32calc.exe",
+            "path": "C:\\Windows\\System32\\win32calc.exe"
+          },
+          {
+            "name": "Character Map",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\charmap.exe",
+            "path": "C:\\Windows\\System32\\charmap.exe"
+          },
+          {
+            "name": "CMake (cmake-gui)",
+            "appId": "{6D809377-6AF0-444B-8957-A3773F02200E}\\CMake\\bin\\cmake-gui.exe",
+            "path": "C:\\Program Files\\CMake\\bin\\cmake-gui.exe"
+          },
+          {
+            "name": "Command Prompt",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\cmd.exe",
+            "path": "C:\\Windows\\System32\\cmd.exe"
+          },
+          {
+            "name": "Component Services",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\comexp.msc",
+            "path": "C:\\Windows\\System32\\comexp.msc"
+          },
+          {
+            "name": "Computer Management",
+            "appId": "Microsoft.AutoGenerated.{8ABD94FB-E7D6-84A6-A997-C918EDDE0AE5}",
+            "path": ""
+          },
+          {
+            "name": "Control Panel",
+            "appId": "Microsoft.Windows.ControlPanel",
+            "path": ""
+          },
+          {
+            "name": "CPAN Client",
+            "appId": "C:\\Strawberry\\perl\\bin\\cpan.bat",
+            "path": "C:\\Strawberry\\perl\\bin\\cpan.bat"
+          },
+          {
+            "name": "Create local library areas",
+            "appId": "C:\\Strawberry\\perl\\bin\\llw32helper.bat",
+            "path": "C:\\Strawberry\\perl\\bin\\llw32helper.bat"
+          },
+          {
+            "name": "Debuggable Package Manager",
+            "appId": "Microsoft.AutoGenerated.{96690F80-0B7F-841E-E0DB-CC38AC5C839F}",
+            "path": ""
+          },
+          {
+            "name": "Defragment and Optimize Drives",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\dfrgui.exe",
+            "path": "C:\\Windows\\System32\\dfrgui.exe"
+          },
+          {
+            "name": "Developer Command Prompt for VS",
+            "appId": "Microsoft.AutoGenerated.{D0C2A2E5-9BC0-0E1A-5229-7C183E76F4D1}",
+            "path": ""
+          },
+          {
+            "name": "Developer PowerShell for VS",
+            "appId": "Microsoft.AutoGenerated.{C6632960-592B-D396-05C3-E176305E70EF}",
+            "path": ""
+          },
+          {
+            "name": "Disk Cleanup",
+            "appId": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\cleanmgr.exe",
+            "path": "C:\\Windows\\System32\\cleanmgr.exe"
+          },
+          {
+            "name": "Event Viewer",
+            "appId": "Microsoft.AutoGenerated.{BB044BFD-25B7-2FAA-22A8-6371A93E0456}",
+            "path": ""
+          },
+          {
+            "name": "Feedback Hub",
+            "appId": "Microsoft.WindowsFeedbackHub_8wekyb3d8bbwe!App",
+            "path": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "iconos-windows",
+      "ok": true,
+      "ms": 882,
+      "info": {
+        "ms": 882,
+        "results": [
+          {
+            "name": "explorer",
+            "src": "C:\\Windows\\explorer.exe",
+            "ok": true
+          },
+          {
+            "name": "notepad",
+            "src": "C:\\Windows\\System32\\notepad.exe",
+            "ok": true
+          },
+          {
+            "name": "taskmgr",
+            "src": "C:\\Windows\\System32\\Taskmgr.exe",
+            "ok": true
+          },
+          {
+            "name": "control",
+            "src": "C:\\Windows\\System32\\control.exe",
+            "ok": true
+          },
+          {
+            "name": "este-equipo",
+            "src": "shell:MyComputerFolder",
+            "ok": true
+          },
+          {
+            "name": "papelera",
+            "src": "shell:RecycleBinFolder",
+            "ok": true
+          },
+          {
+            "name": "texto",
+            "src": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\lz-prueba.txt",
+            "ok": true
+          },
+          {
+            "name": "carpeta",
+            "src": "C:\\Users\\runneradmin",
+            "ok": true
+          },
+          {
+            "name": "app0",
+            "app": "{6D809377-6AF0-444B-8957-A3773F02200E}\\7-Zip\\7zFM.exe",
+            "label": "7-Zip File Manager",
+            "ok": true
+          },
+          {
+            "name": "app1",
+            "app": "anaconda.PowerShell.Miniconda.base",
+            "label": "Anaconda PowerShell Prompt",
+            "ok": true
+          },
+          {
+            "name": "app2",
+            "app": "anaconda.CmdExe.Miniconda.base",
+            "label": "Anaconda Prompt",
+            "ok": true
+          },
+          {
+            "name": "app3",
+            "app": "{6D809377-6AF0-444B-8957-A3773F02200E}\\PostgreSQL\\17\\bin\\stackbuilder.exe",
+            "label": "Application Stack Builder",
+            "ok": true
+          },
+          {
+            "name": "app4",
+            "app": "{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}\\appverif.exe",
+            "label": "Application Verifier (WOW)",
+            "ok": true
+          },
+          {
+            "name": "app5",
+            "app": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\appverif.exe",
+            "label": "Application Verifier (X64)",
+            "ok": true
+          },
+          {
+            "name": "calculadora",
+            "app": "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\win32calc.exe",
+            "ok": true
+          }
+        ],
+        "sizes": {
+          "explorer": 256,
+          "notepad": 256,
+          "taskmgr": 256,
+          "control": 256,
+          "este-equipo": 256,
+          "papelera": 256,
+          "texto": 256,
+          "carpeta": 256,
+          "app0": 256,
+          "app1": 256,
+          "app2": 256,
+          "app3": 256,
+          "app4": 256,
+          "app5": 256,
+          "calculadora": 256
+        }
+      }
+    },
+    {
+      "name": "ayudante-shell",
+      "ok": true,
+      "ms": 1008,
+      "info": {
+        "msgIds": {
+          "appbar": 49477,
+          "taskbarCreated": 49262
+        },
+        "fg": {
+          "h": 262702,
+          "pid": 2168,
+          "r": [
+            132,
+            108,
+            892,
+            668
+          ],
+          "m": [
+            0,
+            0,
+            1024,
+            768
+          ],
+          "full": 0,
+          "max": 0,
+          "min": 0,
+          "shell": 0,
+          "own": true,
+          "rect": {
+            "x": 132,
+            "y": 108,
+            "width": 760,
+            "height": 560
+          }
+        },
+        "windows": 2
+      }
+    },
+    {
+      "name": "temperatura-procesador",
+      "ok": true,
+      "ms": 23353,
+      "info": {
+        "status": {
+          "state": "noserver",
+          "app": "LibreHardwareMonitor"
+        },
+        "seen": [
+          "noserver",
+          "noserver",
+          "noserver",
+          "noserver",
+          "noserver",
+          "noserver",
+          "noserver",
+          "noserver"
+        ],
+        "sample": "noserver"
+      }
+    },
+    {
+      "name": "reservar-espacio",
+      "ok": true,
+      "ms": 6531,
+      "info": {
+        "before": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        },
+        "after": {
+          "bounds": {
+            "x": 0,
+            "y": 158,
+            "width": 1024,
+            "height": 562
+          },
+          "bar": {
+            "thickness": 64,
+            "rect": {
+              "x": 58,
+              "y": 498,
+              "width": 908,
+              "height": 54
+            }
+          },
+          "reserved": {
+            "x": 0,
+            "y": 654,
+            "width": 1024,
+            "height": 66,
+            "edge": "bottom"
+          },
+          "failed": false,
+          "dodged": false,
+          "workArea": {
+            "x": 0,
+            "y": 0,
+            "width": 1024,
+            "height": 654
+          }
+        },
+        "restored": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        }
+      }
+    },
+    {
+      "name": "esquivar-ventanas",
+      "ok": true,
+      "ms": 5034,
+      "info": {
+        "st": {
+          "bounds": {
+            "x": 0,
+            "y": 158,
+            "width": 1024,
+            "height": 562
+          },
+          "bar": {
+            "thickness": 64,
+            "rect": {
+              "x": 58,
+              "y": 498,
+              "width": 908,
+              "height": 54
+            }
+          },
+          "reserved": null,
+          "failed": false,
+          "dodged": true,
+          "workArea": {
+            "x": 0,
+            "y": 0,
+            "width": 1024,
+            "height": 720
+          }
+        },
+        "fg": {
+          "max": 1,
+          "r": [
+            -8,
+            -8,
+            1032,
+            728
+          ],
+          "own": false
+        }
+      }
+    },
+    {
+      "name": "programas-abiertos",
+      "ok": true,
+      "ms": 4938,
+      "info": {
+        "running": true,
+        "wins": [
+          {
+            "h": 655954,
+            "p": "C:\\Windows\\System32\\notepad.exe",
+            "m": 0
+          }
+        ],
+        "activated": true,
+        "fg": 655954
+      }
+    },
+    {
+      "name": "mas-usados",
+      "ok": true,
+      "ms": 340,
+      "info": {
+        "entries": 3,
+        "top": [
+          {
+            "name": "Feedback Hub",
+            "score": 95
+          },
+          {
+            "name": "Terminal",
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "accesos-escritorio",
+      "ok": true,
+      "ms": 1,
+      "info": {
+        "count": 5,
+        "groups": [
+          [
+            "Internet",
+            [
+              "Firefox",
+              "Google Chrome",
+              "Microsoft Edge"
+            ]
+          ],
+          [
+            "Otros",
+            [
+              "Unity Hub",
+              "R 4.6.1"
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "name": "boton-barra-tareas",
+      "ok": true,
+      "ms": 8013,
+      "info": {
+        "minimized": true,
+        "before": false,
+        "aboveBefore": false,
+        "afterFirstClick": true,
+        "topFirst": true,
+        "aboveFirst": true,
+        "afterSecondClick": false,
+        "topSecond": false,
+        "visibleSecond": true,
+        "aboveSecond": false,
+        "removed": true
+      }
+    },
+    {
+      "name": "soltar-al-salir",
+      "ok": true,
+      "ms": 6567,
+      "info": {
+        "before": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        },
+        "reserved": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 657
+        },
+        "after": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        },
+        "stopMs": 58
+      }
+    },
+    {
+      "name": "recuperar-cierre-brusco",
+      "ok": true,
+      "ms": 16543,
+      "info": {
+        "before": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        },
+        "reserved": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 657
+        },
+        "afterKill": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 657
+        },
+        "recovered": {
+          "x": 0,
+          "y": 0,
+          "width": 1024,
+          "height": 720
+        },
+        "file": "D:\\a\\_temp\\userdata\\appbars.json"
+      }
+    },
+    {
+      "name": "miniatura",
+      "ok": true,
+      "ms": 65,
+      "info": {
+        "ok": false
+      }
+    }
+  ],
+  "consoleErrors": [],
+  "ok": true,
+  "critical": []
+}

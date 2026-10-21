@@ -88,11 +88,13 @@ function procTotals() {
 
 class Metrics extends EventEmitter {
   // config: devuelve la configuración del monitor (para saber si avisar temperaturas críticas).
-  // cpuReader: lee la temperatura real del procesador (LibreHardwareMonitor) si está disponible.
-  constructor({ config = () => ({}), cpuReader = null } = {}) {
+  // cpuReader: lee la temperatura real del procesador (LibreHardwareMonitor) si está disponible;
+  // cpuStatus: en qué paso está (abierto, sin servidor web, sin sensor) para guiar al usuario.
+  constructor({ config = () => ({}), cpuReader = null, cpuStatus = null } = {}) {
     super();
     this.config = config;
     this.cpuReader = cpuReader;
+    this.cpuStatus = cpuStatus;
     this.lhmTemp = null;
     this.ticks = 0;
     this.critCount = {};
@@ -268,6 +270,7 @@ class Metrics extends EventEmitter {
     };
     sample.sensors = buildSensors({ temps: sample.temps, cpuTemp, gpuTemp, gpuName: gpu?.name, disks: diskTemps });
     sample.cpuTempSource = cpuTemp ? cpuTemp.src : sample.temps?.length ? 'acpi' : null;
+    sample.cpuTempState = cpuTemp ? 'ok' : this.cpuStatus?.()?.state || null;
     this.checkAlerts(sample.sensors);
     const push = (k, v) => {
       const a = this.hist[k];

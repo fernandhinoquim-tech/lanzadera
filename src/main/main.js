@@ -187,8 +187,17 @@ async function resetAll() {
   app.exit(0);
 }
 
+// Al activar el modo botón: el icono parpadea en la barra de tareas y un aviso dice cómo anclarlo.
+function announceTaskbarButton() {
+  ctx.taskbarButton.flash();
+  if (process.env.LANZADERA_SMOKE) return;
+  try {
+    if (Notification.isSupported()) new Notification({ title: 'Lanzadera ya está en tu barra de tareas', body: 'Busca su icono, que parpadea: clic derecho › Anclar a la barra de tareas, y arrástralo junto al botón de Windows. Un clic despliega la barra.', icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') }).show();
+  } catch {}
+}
+
 // Versión con novedades que conviene mostrar al actualizar.
-const NEWS_VERSION = '1.1.0';
+const NEWS_VERSION = '1.4.1';
 
 function withTimeout(promise, ms, fallback) {
   return Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
@@ -223,7 +232,7 @@ async function init() {
   ctx.panel = new PanelWindow();
   ctx.search = new SearchWindow();
   ctx.cpuSensors = new CpuSensors();
-  ctx.metrics = new Metrics({ config: () => ctx.store.get().monitor, cpuReader: () => ctx.cpuSensors.read() });
+  ctx.metrics = new Metrics({ config: () => ctx.store.get().monitor, cpuReader: () => ctx.cpuSensors.read(), cpuStatus: () => ctx.cpuSensors.status });
   ctx.metrics.on('alert', (s) => {
     try {
       if (Notification.isSupported()) new Notification({ title: `Temperatura crítica: ${s.label}`, body: `Llegó a ${s.value} °C (crítico desde ${s.critical} °C). Revisa la ventilación o cierra programas pesados.`, icon: path.join(__dirname, '..', '..', 'assets', 'icon.png') }).show();
@@ -268,6 +277,7 @@ async function init() {
   ctx.shell.start();
 
   let lastTheme = ctx.store.get().appearance.theme;
+  let wasTaskbar = ctx.docks.taskbarMode();
   ctx.store.on('change', (cfg) => {
     if (cfg.appearance.theme !== lastTheme) {
       lastTheme = cfg.appearance.theme;
@@ -277,6 +287,8 @@ async function init() {
     ctx.docks.setFullscreen(ctx.shell.fullscreenDisplay);
     ctx.taskbarButton.sync(ctx.docks.taskbarMode());
     if (!ctx.docks.taskbarMode() && ctx.docks.summoned) ctx.docks.summon(false);
+    if (ctx.docks.taskbarMode() && !wasTaskbar) announceTaskbarButton();
+    wasTaskbar = ctx.docks.taskbarMode();
     ctx.monitor.sync();
     ctx.clip.apply();
     registerHotkeys();

@@ -7,12 +7,14 @@ import { homePage, appearancePage, positionPage, behaviorPage, widgetsPage, icon
 import { itemsPage, workspacesPage, openAddDialog } from './pages-items.js';
 import { organizerPage, welcomePage } from './pages-org.js';
 import { accesosPage, novedadesPage } from './pages-plan.js';
+import { temperaturaPage } from './pages-temp.js';
 
 const ROUTES = {
   '/inicio': ['Inicio', 'house', homePage],
   '/elementos': ['Elementos del dock', 'layout-grid', itemsPage],
   '/accesos': ['Accesos y grupos', 'columns-2', accesosPage],
   '/novedades': ['Novedades', 'sparkles', novedadesPage],
+  '/temperatura': ['Temperatura del procesador', 'thermometer', temperaturaPage],
   '/apariencia': ['Apariencia', 'palette', appearancePage],
   '/posicion': ['Posición', 'move', positionPage],
   '/comportamiento': ['Comportamiento', 'mouse-pointer-click', behaviorPage],

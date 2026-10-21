@@ -545,3 +545,7 @@ body {
   height: 40px;
   -webkit-app-region: drag;
 }
+
+.gitem[data-k='cpu-off'] {
+  cursor: pointer;
+}

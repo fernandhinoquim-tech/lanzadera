@@ -1,6 +1,8 @@
 ## Novedades
 
-- **Botón en la barra de tareas.** Nuevo modo (clic derecho en la barra › Al no usarla › Botón en la barra de tareas): Lanzadera aparece como un icono en la barra de tareas de Windows. Ánclalo y ponlo junto al botón de Windows: un clic despliega la barra encima de todo, sin importar qué ventanas tengas abiertas, y otro clic la oculta. También se oculta al abrir un programa, con Esc o al hacer clic fuera, como el menú Inicio.
+- **El botón de la barra de tareas, a un clic.** Al actualizar se abre «Novedades» con un botón **Activar**. También está en el icono junto al reloj (casilla «Botón en la barra de tareas») y en clic derecho en la barra › Al no usarla. Al activarlo, el icono parpadea en la barra de tareas y un aviso explica cómo anclarlo junto al botón de Windows.
+- **El botón anclado es solo de la barra.** Ya no se mezcla con la ventana de configuración, y si Lanzadera está cerrada, el icono anclado la abre.
+- **Guía para la temperatura del procesador.** Windows protege ese sensor; ahora Lanzadera detecta en qué paso vas (LibreHardwareMonitor cerrado, abierto sin su servidor web, o sin el controlador PawnIO) y te dice qué falta. La guía (Configuración › Widgets › Temperatura del procesador, o clic en el medidor del procesador) se marca sola.
 
 ## Cómo instalar
 

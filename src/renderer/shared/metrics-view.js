@@ -2,7 +2,7 @@
 import { h, esc } from './dom.js';
 import { chartSVG, ringSVG, gaugeSVG, fmtBytes, fmtRate, METRIC_COLORS as C, ZONE_TEXT } from './charts.js';
 import { fluentUrl } from './icon-view.js';
-import { CPU_TEMP_HELP } from './metrics-gadget.js';
+import { cpuTempHelp } from './metrics-gadget.js';
 
 const ICON = { cpu: '1f4bb', mem: '1f4df', gpu: '1f3ae', net: '1f6dc', disk: '1f4be', procs: '1f4ca', sys: '1f50b', temp: '1f321-fe0f' };
 
@@ -35,9 +35,12 @@ function kv(k, v) {
 /**
  * Crea el panel. mode: 'full' (todo) | 'popup' (dock) | 'compact' (monitor flotante).
  */
-export function createDashboard({ mode = 'full' } = {}) {
+export function createDashboard({ mode = 'full', onCpuGuide } = {}) {
   const compact = mode === 'compact';
   const root = h(`div.mdash.mode-${mode}`);
+  root.addEventListener('click', (e) => {
+    if (e.target.closest('[data-act="cpu-guide"]')) onCpuGuide?.();
+  });
   const cpu = card('cpu', 'Procesador');
   const mem = card('mem', 'Memoria');
   const gpu = card('gpu', 'Gráfica');
@@ -126,8 +129,8 @@ export function createDashboard({ mode = 'full' } = {}) {
                 `<div class="tgauge"><div class="tg-viz">${gaugeSVG({ value: s.value, min: 20, max: s.max, zones: s, unit: '°', status: ZONE_TEXT[s.zone] })}</div>` +
                 `<div><b>${esc(s.label)}</b><small>${esc(s.source)}</small><small>Cuidado desde ${s.caution} °C · Crítico desde ${s.critical} °C</small><small>Límites ${esc(s.limits)}</small></div></div>`
             )
-            .join('')}</div>` + (list.some((s) => s.key === 'cpu') ? '' : `<div class="cpuhelp">${CPU_TEMP_HELP}</div>`)
-        : `<div class="cpuhelp">${CPU_TEMP_HELP}</div>`;
+            .join('')}</div>` + (list.some((s) => s.real) ? '' : `<div class="cpuhelp">${cpuTempHelp(now.cpuTempState)}</div>`)
+        : `<div class="cpuhelp">${cpuTempHelp(now.cpuTempState)}</div>`;
     }
 
     // Procesos

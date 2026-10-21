@@ -46,6 +46,30 @@ jobs:
           Write-Host "Código: $LASTEXITCODE"
           Get-ChildItem $env:RUNNER_TEMP -Filter *.png | Format-Table Name, Length
 
+      # Para probar la lectura de la temperatura del procesador, como la haría el usuario.
+      - name: Abrir LibreHardwareMonitor con su servidor web
+        shell: pwsh
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'lhm.zip'
+          $dir = Join-Path $env:RUNNER_TEMP 'lhm'
+          Invoke-WebRequest 'https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v0.9.6/LibreHardwareMonitor.zip' -OutFile $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '086d9f1b5a99e643edc2cfaaac16051685b551e4c5ac0b32a57c58c0e529c001') { throw "Hash inesperado: $hash" }
+          Expand-Archive $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem $dir -Recurse -Filter 'LibreHardwareMonitor.exe' | Select-Object -First 1
+          '<?xml version="1.0" encoding="utf-8"?><configuration><appSettings><add key="runWebServerMenuItem" value="true" /><add key="listenerPort" value="8085" /><add key="startMinMenuItem" value="true" /><add key="minTrayMenuItem" value="true" /></appSettings></configuration>' | Set-Content (Join-Path $exe.DirectoryName 'LibreHardwareMonitor.config') -Encoding utf8
+          Start-Process $exe.FullName -WorkingDirectory $exe.DirectoryName -WindowStyle Minimized
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $r = Invoke-WebRequest 'http://127.0.0.1:8085/data.json' -UseBasicParsing -TimeoutSec 2
+              Write-Host "data.json responde ($($r.Content.Length) bytes)"
+              break
+            } catch { Start-Sleep 2 }
+          }
+          Get-Process LibreHardwareMonitor -ErrorAction SilentlyContinue | Format-Table Id, ProcessName, MainWindowTitle
+
       - name: Prueba de humo (abre la app real y toma capturas)
         id: smoke
         shell: pwsh

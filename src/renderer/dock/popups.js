@@ -397,7 +397,7 @@ async function buildContent(item, anchorRect) {
 }
 
 function dashboardView() {
-  const dash = createDashboard({ mode: 'popup' });
+  const dash = createDashboard({ mode: 'popup', onCpuGuide: () => (closePopup(), api.openPanel('/temperatura')) });
   const box = h('div', { style: { width: '700px', maxWidth: '100%' } }, dash.el);
   S.hooks.dashboard = dash;
   if (S.metrics) dash.update(S.metrics);

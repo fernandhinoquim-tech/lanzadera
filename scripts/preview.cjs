@@ -96,6 +96,7 @@ const mockScript = (state) => `
         ];
         now.gpu.temp = now.sensors[1].value;
         if (window.__noCpu) now.sensors = now.sensors.filter((x) => x.key !== 'cpu');
+        now.cpuTempState = (window.__cpuStatus || { state: 'off' }).state;
         for (const [kk, v] of [['cpu', now.cpu], ['mem', now.mem], ['gpu', now.gpu.util], ['rx', now.net.rx], ['tx', now.net.tx], ['dr', now.disk.r], ['dw', now.disk.w]]) { hist[kk].push(v); if (hist[kk].length > 90) hist[kk].shift(); }
         window.__mlast = { now, hist };
         emit('metrics', window.__mlast);
@@ -104,6 +105,7 @@ const mockScript = (state) => `
       window.__mt = setInterval(gen, 1000);
     },
     metricsSnapshot: async () => window.__mlast || null,
+    cpuTempStatus: async () => window.__cpuStatus || { state: 'off' },
     onMetrics: on('metrics'),
     monitorResize: () => {},
     sysStats: async () => ({ cpu: 23, mem: 61, memUsed: 9.8e9, memTotal: 16e9, disk: { total: 512e9, free: 201e9, root: 'C:\\\\' }, uptime: 93000, cpuModel: 'Intel(R) Core(TM) i7-1255U', cores: 12 }),
@@ -145,8 +147,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
   const errors = [];
-  const open = async (url, { w = 1600, h = 620, dark = true, patch = {} } = {}) => {
+  const open = async (url, { w = 1600, h = 620, dark = true, patch = {}, cpu = null } = {}) => {
     const page = await browser.newPage({ viewport: { width: w, height: h } });
+    if (cpu) await page.addInitScript((c) => (window.__cpuStatus = c), cpu);
     page.on('pageerror', (e) => errors.push(url + ': ' + e.message));
     page.on('console', (m) => m.type() === 'error' && !/lanz:|ERR_UNKNOWN_URL_SCHEME|Failed to load resource/.test(m.text()) && errors.push(url + ': ' + m.text()));
     await page.addInitScript(mockScript(makeState(dark, patch)));
@@ -179,7 +182,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         await page.close();
       } else if (kind === 'panel') {
         const opts = arg ? JSON.parse(arg) : {};
-        const page = await open('/panel/index.html#' + (opts.route || '/inicio'), { w: opts.w || 1120, h: opts.h || 780, dark: opts.dark !== false, patch: opts.patch || {} });
+        const page = await open('/panel/index.html#' + (opts.route || '/inicio'), { w: opts.w || 1120, h: opts.h || 780, dark: opts.dark !== false, patch: opts.patch || {}, cpu: opts.cpu });
         await wait(opts.wait || 600);
         if (opts.click) for (const c of [].concat(opts.click)) { await page.click(c); await wait(500); }
         if (opts.scroll) { await page.evaluate((y) => (document.getElementById('content').scrollTop = y), opts.scroll); await wait(300); }
@@ -187,7 +190,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         await page.close();
       } else if (kind === 'monitor') {
         const opts = arg ? JSON.parse(arg) : {};
-        const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 350, h: opts.h || 760, dark: opts.dark !== false, patch: opts.patch || {} });
+        const page = await open('/monitor/index.html?mode=' + (opts.mode || 'compact'), { w: opts.w || 350, h: opts.h || 760, dark: opts.dark !== false, patch: opts.patch || {}, cpu: opts.cpu });
         if (opts.noCpu) await page.evaluate(() => (window.__noCpu = true));
         await page.evaluate(() => window.lanz.metricsSubscribe(true));
         await wait(1500);

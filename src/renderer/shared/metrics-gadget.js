@@ -5,11 +5,24 @@ import { chartSVG, gaugeSVG, fmtBytes, fmtRate, METRIC_COLORS as C, ZONE_COLORS,
 
 const TEMP_SLOTS = 90;
 
-// Por qué no aparece la temperatura del procesador y cómo verla.
-export const CPU_TEMP_HELP =
-  '<p class="dnote">Windows protege el sensor del procesador: solo lo leen programas con permisos de administrador y un controlador especial. Para verlo aquí:</p>' +
-  '<ol class="dsteps"><li>Instala <b>LibreHardwareMonitor</b> (gratis y de código abierto) y ábrelo.</li><li>Si pregunta por <b>PawnIO</b>, elige <b>Aceptar</b>.</li><li>En <b>Options › Remote Web Server</b>, marca <b>Run</b> (puerto 8085).</li><li>En <b>Options</b>, marca <b>Run On Windows Startup</b>.</li></ol>' +
-  '<p class="dnote">Lanzadera tomará la temperatura sola. También funciona con HWiNFO u OpenHardwareMonitor abiertos.</p>';
+// Por qué no aparece la temperatura del procesador y qué paso falta, según lo que detecta
+// Lanzadera: off (no hay programa de sensores), noserver (abierto sin servidor web) o
+// nosensor (responde, pero sin el controlador PawnIO).
+const CPU_HINTS = {
+  off: [
+    'Cómo verla',
+    '<p class="dnote">Windows protege el sensor del procesador: solo lo leen programas con permisos de administrador y un controlador especial. <b>LibreHardwareMonitor</b> (gratis y de código abierto) lo lee y se lo pasa a Lanzadera.</p>' +
+      '<ol class="dsteps"><li>Descárgalo y ábrelo.</li><li>Si pregunta por <b>PawnIO</b>, acepta.</li><li>En <b>Options › Remote Web Server</b>, marca <b>Run</b>.</li></ol>',
+  ],
+  noserver: ['Falta un paso', '<p class="dnote"><b>LibreHardwareMonitor está abierto</b>, pero falta activar su servidor web: en su menú <b>Options › Remote Web Server</b>, marca <b>Run</b> (puerto 8085).</p>'],
+  nosensor: ['Falta PawnIO', '<p class="dnote"><b>LibreHardwareMonitor responde</b>, pero no ve el sensor del procesador: falta su controlador <b>PawnIO</b>. Ciérralo, vuelve a abrirlo y acepta instalar PawnIO.</p>'],
+};
+
+export const cpuTempHint = (state) => (CPU_HINTS[state] || CPU_HINTS.off)[0];
+
+export function cpuTempHelp(state) {
+  return (CPU_HINTS[state] || CPU_HINTS.off)[1] + '<button class="dguide" data-act="cpu-guide">Ver la guía paso a paso</button>';
+}
 
 function uptime(s) {
   const d = Math.floor(s / 86400);
@@ -44,7 +57,7 @@ function thermoBar(s, lo, hi) {
   );
 }
 
-export function createGadget() {
+export function createGadget({ onCpuGuide } = {}) {
   const root = h('div.gview');
   const usage = h('div.gsec.g-use');
   const useDrawer = h('div.gdrawer', h('div.gdin'));
@@ -139,7 +152,7 @@ export function createGadget() {
           .join('')
       );
     }
-    if (key === 'cpu-off') return CPU_TEMP_HELP;
+    if (key === 'cpu-off') return cpuTempHelp(now.cpuTempState);
     if (key.startsWith('t:')) {
       const s = (now.sensors || []).find((x) => 't:' + x.key === key);
       if (!s) return '';
@@ -155,7 +168,8 @@ export function createGadget() {
         kv('Límites', s.limits) +
         (Number.isFinite(r.min) ? kv('Mínima y máxima de la sesión', `${r.min} °C · ${r.max} °C`) : '') +
         kv('Sensor', esc(s.source)) +
-        `<p class="dnote">${advice}</p>`
+        `<p class="dnote">${advice}</p>` +
+        (s.key === 'cpu' && !s.real ? '<p class="dnote">Es la temperatura de la placa, cerca del procesador.</p><button class="dguide" data-act="cpu-guide">Ver la del chip</button>' : '')
       );
     }
     return '';
@@ -198,6 +212,9 @@ export function createGadget() {
     hoverTimer = setTimeout(() => open(k), openKey ? 80 : 260);
   });
   root.addEventListener('pointerleave', scheduleClose);
+  root.addEventListener('click', (e) => {
+    if (e.target.closest('[data-act="cpu-guide"], .gitem[data-k="cpu-off"]')) onCpuGuide?.();
+  });
 
   // ---------- Actualización por segundo ----------
 
@@ -235,7 +252,7 @@ export function createGadget() {
       const it = item('cpu-off', temps);
       if (!it.viz.firstChild) it.viz.innerHTML = gaugeSVG({ value: NaN, zones: { caution: 80, critical: 95 }, min: 20, max: 110, unit: '' });
       it.title.textContent = 'Procesador';
-      it.sub.textContent = 'Cómo verla';
+      it.sub.textContent = cpuTempHint(now.cpuTempState);
       temps.prepend(it.el);
     }
     for (const s of sensors) {
@@ -248,7 +265,7 @@ export function createGadget() {
       const it = item('t:' + s.key, temps);
       it.viz.innerHTML = gaugeSVG({ value: s.value, min: 20, max: s.max, zones: s, unit: '°', status: ZONE_TEXT[s.zone] });
       it.title.textContent = s.label;
-      it.sub.textContent = s.key === 'cpu' ? 'Placa' : s.key === 'gpu' ? (now.gpu?.name || '').replace(/^(NVIDIA|AMD|Intel\(R\))\s+/i, '').slice(0, 18) : s.source.slice(0, 18);
+      it.sub.textContent = s.key === 'cpu' ? (s.real ? 'Sensor del chip' : 'Placa') : s.key === 'gpu' ? (now.gpu?.name || '').replace(/^(NVIDIA|AMD|Intel\(R\))\s+/i, '').slice(0, 18) : s.source.slice(0, 18);
       it.el.classList.toggle('hot', s.zone === 'crit');
     }
     const worst = sensors.filter((s) => s.zone !== 'ok').sort((a, b) => b.value - b.critical - (a.value - a.critical))[0];

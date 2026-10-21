@@ -21,7 +21,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 |---|---|---|
 | 🔍 | **Efecto lupa** | Los iconos crecen al pasar el mouse. En modo *compacto* la barra es pequeña y se agranda al tocarla. |
 | 📍 | **Cualquier borde** | Abajo, arriba, izquierda o derecha; alineada al inicio, centro o final; en una o en todas las pantallas. |
-| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color), oculta (aparece al llevar el mouse al borde) o **botón en la barra de tareas** (un clic en su icono, junto al botón de Windows, la despliega encima de todo). |
+| 👁️ | **Modos de reposo** | Siempre visible, compacta, *mini* (una línea de color), oculta (aparece al llevar el mouse al borde) o **botón en la barra de tareas** (un clic en su icono, junto al botón de Windows, la despliega encima de todo; se activa desde el icono junto al reloj o con clic derecho › Al no usarla). |
 | 🪟 | **No tapa tus ventanas** | Reserva su franja como la barra de tareas: las ventanas maximizadas terminan justo arriba. También puede esconderse cuando una ventana lo toca, quedar **al fondo en el escritorio** (detrás de tus ventanas) o encima de todo. |
 | ⭐ | **Barra en dos zonas** | Primero tus programas más usados (según el uso real en Windows) y después tus grupos de accesos directos. |
 | 🗂️ | **Grupos** | Un icono que abre muchos más, en **abanico**, **cuadrícula** o **lista**. Suelta un icono sobre otro para crear uno, o arma grupos por tema con los accesos de tu escritorio. «Abrir todo» lanza el grupo completo. |
@@ -34,7 +34,7 @@ Las **actualizaciones son automáticas**: cuando hay una versión nueva, Lanzade
 | ✨ | **Ordenar escritorio** | Acomoda los archivos sueltos en carpetas por tipo (Imágenes, PDF, Música…). Muestra una vista previa y **siempre se puede deshacer**. |
 | 🎨 | **Iconos 3D** | 1.238 iconos 3D al estilo de Windows 11 (Fluent de Microsoft) con buscador en español, como objeto libre o sobre mosaico. |
 | ✏️ | **Iconos de línea** | Banco de 1.850 iconos con 7 estilos (Degradado, Brillante 3D, Vidrio, Neón, Pastel, Sólido, Mínimo), 19 degradados, colores propios, emoji, letras, o **tus propias imágenes**. |
-| 📈 | **Monitor de rendimiento** | Un panel en el escritorio con medidores de CPU, RAM y gráfica, red y disco, y **temperaturas** del procesador, la tarjeta gráfica y los SSD en medidores con zona verde, amarilla (cuidado) y roja (crítico). La del procesador necesita LibreHardwareMonitor, HWiNFO u OpenHardwareMonitor abiertos, porque Windows solo la entrega a programas con permisos de administrador. Al pasar el puntero muestra el detalle; avisa si algo se calienta demasiado. |
+| 📈 | **Monitor de rendimiento** | Un panel en el escritorio con medidores de CPU, RAM y gráfica, red y disco, y **temperaturas** del procesador, la tarjeta gráfica y los SSD en medidores con zona verde, amarilla (cuidado) y roja (crítico). La del procesador necesita LibreHardwareMonitor, HWiNFO u OpenHardwareMonitor abiertos, porque Windows solo la entrega a programas con permisos de administrador; una guía dentro de la app detecta en qué paso vas y te dice qué falta. Al pasar el puntero muestra el detalle; avisa si algo se calienta demasiado. |
 | 🖼️ | **Iconos originales en HD** | Los iconos de tus programas se extraen de Windows a 256 px para que se vean nítidos al agrandarse. |
 | ⏰ | **Widgets** | Reloj con calendario, historial del portapapeles y notas rápidas. |
 | 🤖 | **Sugerencias** | El icono «Sugeridas» aprende qué programas usas a cada hora. |

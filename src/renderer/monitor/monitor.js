@@ -9,7 +9,8 @@ const api = window.lanz;
 const mode = new URLSearchParams(location.search).get('mode') === 'full' ? 'full' : 'compact';
 document.documentElement.classList.add('mode-' + mode);
 const root = document.getElementById('root');
-const dash = mode === 'compact' ? createGadget() : createDashboard({ mode });
+const onCpuGuide = () => api.openPanel('/temperatura');
+const dash = mode === 'compact' ? createGadget({ onCpuGuide }) : createDashboard({ mode, onCpuGuide });
 let state = null;
 
 function btn(icon, title, onClick, on = false) {

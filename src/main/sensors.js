@@ -3,6 +3,7 @@
 // Si está abierto con su servidor web activado, Lanzadera lee su data.json (solo lectura,
 // solo en este equipo).
 const http = require('http');
+const { execFile } = require('child_process');
 const { isWin } = require('./winhelper');
 
 const PORT = 8085;
@@ -42,6 +43,27 @@ function cpuTempFromTree(root) {
   return best && { value: best.value, src: 'LibreHardwareMonitor', name: best.name };
 }
 
+// ¿El árbol trae el procesador? Sin el controlador PawnIO aparece con carga y reloj, pero sin
+// temperaturas.
+function hasCpu(root) {
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return false;
+    if (/cpu/i.test(String(node.ImageURL || '')) || /^\/(intelcpu|amdcpu|cpu)\//i.test(String(node.SensorId || node.id || ''))) return true;
+    return (node.Children || []).some(walk);
+  };
+  return walk(root);
+}
+
+// Nombre del programa de sensores abierto (LibreHardwareMonitor u OpenHardwareMonitor), o ''.
+function sensorAppRunning() {
+  return new Promise((resolve) => {
+    execFile('tasklist', ['/FO', 'CSV', '/NH'], { windowsHide: true, timeout: 5000, maxBuffer: 4 << 20 }, (err, out) => {
+      const m = /"(LibreHardwareMonitor|OpenHardwareMonitor)\.exe"/i.exec(String(out || ''));
+      resolve(m ? m[1] : '');
+    });
+  });
+}
+
 function fetchLocal(pathname, timeout = 900) {
   return new Promise((resolve) => {
     const req = http.get({ host: '127.0.0.1', port: PORT, path: pathname, timeout }, (res) => {
@@ -68,20 +90,42 @@ class CpuSensors {
   constructor() {
     this.last = null;
     this.retryAt = 0;
+    // off: no hay programa de sensores · noserver: está abierto sin su servidor web ·
+    // nosensor: responde pero sin la temperatura (falta PawnIO) · ok: hay temperatura.
+    this.status = { state: isWin ? 'off' : 'unsupported' };
   }
 
-  // Temperatura actual (o null). Si el servidor no responde se reintenta cada 20 s.
+  // Temperatura actual (o null). Si no hay temperatura se reintenta cada 20 s.
   async read() {
-    if (!isWin || Date.now() < this.retryAt) return this.last;
+    if (!isWin) return null;
+    if (Date.now() < this.retryAt) return this.last;
+    if (this.busy) return this.busy;
+    this.busy = this.fetch().finally(() => (this.busy = null));
+    return this.busy;
+  }
+
+  async fetch() {
+    this.fetchedAt = Date.now();
     const data = await fetchLocal('/data.json');
     if (!data) {
-      this.retryAt = Date.now() + 20000;
       this.last = null;
+      const app = await sensorAppRunning();
+      this.status = { state: app ? 'noserver' : 'off', app };
+      this.retryAt = Date.now() + 20000;
       return null;
     }
     this.last = cpuTempFromTree(data);
+    this.status = this.last ? { state: 'ok', value: this.last.value, name: this.last.name } : { state: 'nosensor', cpu: hasCpu(data) };
+    if (!this.last) this.retryAt = Date.now() + 20000;
     return this.last;
+  }
+
+  // Estado para la guía (que pregunta cada 2 s): vuelve a leer sin esperar el reintento.
+  async check() {
+    if (Date.now() - (this.fetchedAt || 0) > 1500) this.retryAt = 0;
+    await this.read();
+    return this.status;
   }
 }
 
-module.exports = { CpuSensors, cpuTempFromTree, cpuRank };
+module.exports = { CpuSensors, cpuTempFromTree, cpuRank, hasCpu };

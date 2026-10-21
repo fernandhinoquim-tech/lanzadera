@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('lanz', {
   metricsSnapshot: () => call('metrics:snapshot'),
   onMetrics: (cb) => on('metrics', cb),
   monitorResize: (h) => ipcRenderer.send('monitor:resize', h),
+  cpuTempStatus: () => call('sensors:cpu'),
   suggestions: () => call('stats:suggest'),
   running: () => call('running:get'),
   onRunning: (cb) => on('running', cb),

@@ -201,13 +201,13 @@ async function run(ctx) {
   });
 
   // Panel de configuración
-  const routes = ['/bienvenida', '/inicio', '/elementos', '/accesos', '/novedades', '/apariencia', '/posicion', '/comportamiento', '/espacios', '/iconos', '/organizador', '/widgets', '/respaldo', '/acerca', '/agregar'];
+  const routes = ['/bienvenida', '/inicio', '/elementos', '/accesos', '/novedades', '/temperatura', '/apariencia', '/posicion', '/comportamiento', '/espacios', '/iconos', '/organizador', '/widgets', '/respaldo', '/acerca', '/agregar'];
   for (const r of routes) {
     await step('panel' + r, async () => {
       const w = ctx.panel.open(r);
       await waitLoad(w);
       w.webContents.send('panel:route', r);
-      await wait(r === '/iconos' || r === '/agregar' || r === '/accesos' || r === '/novedades' ? 4000 : 1000);
+      await wait(r === '/iconos' || r === '/agregar' || r === '/accesos' || r === '/novedades' || r === '/temperatura' ? 4000 : 1000);
       await shot(w, '20-panel-' + r.slice(1));
     });
   }
@@ -314,6 +314,23 @@ async function run(ctx) {
       if (!ctx.shell.msgIds) throw new Error('El ayudante no respondió: ' + (ctx.shell.lastError || ctx.shell.lastLine));
       return { msgIds: ctx.shell.msgIds, fg: ctx.shell.fg, windows: ctx.shell.windows.length, error: ctx.shell.lastError };
     }, true);
+    // Temperatura del procesador: en la CI se abre LibreHardwareMonitor antes de la prueba.
+    await step('temperatura-procesador', async () => {
+      const seen = [];
+      let st = null;
+      for (let i = 0; i < 8; i++) {
+        st = await ctx.cpuSensors.check();
+        seen.push(st.state);
+        if (st.state === 'ok') break;
+        await wait(2000);
+      }
+      const w = ctx.panel.open('/temperatura');
+      await waitLoad(w);
+      w.webContents.send('panel:route', '/temperatura');
+      await wait(3500);
+      await shot(w, '21-guia-temperatura');
+      return { status: st, seen, sample: ctx.metrics.snapshot()?.now?.cpuTempState };
+    });
 
     const dockState = () => {
       const w = dockWin();

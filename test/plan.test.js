@@ -208,3 +208,10 @@ test('toma la temperatura del procesador de LibreHardwareMonitor', () => {
   const amd = { Children: [{ Text: 'AMD Ryzen 7', ImageURL: 'images_icon/cpu.png', Children: [{ Text: 'Core (Tctl/Tdie)', Value: '0,0 °C', SensorId: '/amdcpu/0/temperature/2', Children: [] }] }] };
   assert.equal(cpuTempFromTree(amd), null, 'sin el controlador PawnIO, AMD informa 0 °C y se descarta');
 });
+
+test('hasCpu distingue «falta PawnIO» de un árbol sin procesador', () => {
+  const { hasCpu } = require('../src/main/sensors');
+  const noTemps = { Children: [{ Text: 'PC', Children: [{ Text: 'Intel Core i5', ImageURL: 'images_icon/cpu.png', Children: [{ Text: 'Load', Children: [{ Text: 'CPU Total', Value: '12,0 %', SensorId: '/intelcpu/0/load/0', Children: [] }] }] }] }] };
+  assert.equal(hasCpu(noTemps), true);
+  assert.equal(hasCpu({ Children: [{ Text: 'PC', Children: [{ Text: 'Generic Memory', ImageURL: 'images_icon/ram.png', Children: [] }] }] }), false);
+});

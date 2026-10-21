@@ -374,6 +374,8 @@ class DockManager {
   }
 }
 
+const TASKBAR_APP_ID = 'com.lanzadera.app.barra';
+
 // Icono de Lanzadera en la barra de tareas para el modo «botón»: una ventana mínima, fuera de la
 // pantalla y siempre minimizada. Cada clic en su icono la restaura; se avisa y se vuelve a minimizar.
 class TaskbarButton {
@@ -414,11 +416,21 @@ class TaskbarButton {
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
     });
     hardenWebContents(win.webContents);
+    // Identidad propia en la barra de tareas: no se agrupa con la ventana de configuración y,
+    // al anclarlo, el icono abre Lanzadera con --barra (que despliega la barra si ya está abierta).
+    if (process.platform === 'win32') {
+      const { app } = require('electron');
+      const exe = `"${process.execPath}"` + (app.isPackaged ? '' : ` "${app.getAppPath()}"`);
+      try {
+        win.setAppDetails({ appId: TASKBAR_APP_ID, appIconPath: process.execPath, appIconIndex: 0, relaunchCommand: `${exe} --barra`, relaunchDisplayName: 'Lanzadera' });
+      } catch {}
+    }
     // Al restaurarse, esta ventana toma el foco: primero se vuelve a minimizar y recién después se
     // despliega la barra, para que no la cierre al perder el foco.
     win.on('restore', () => {
       if (this.pending) return;
       this.pending = true;
+      win.flashFrame(false);
       setTimeout(() => {
         if (!win.isDestroyed()) win.minimize();
         setTimeout(() => {
@@ -440,6 +452,11 @@ class TaskbarButton {
     win.minimize();
     this.shell?.noAnimation(win);
     this.win = win;
+  }
+
+  // Parpadea en la barra de tareas para que se encuentre al activarlo.
+  flash() {
+    if (this.win && !this.win.isDestroyed()) this.win.flashFrame(true);
   }
 }
 

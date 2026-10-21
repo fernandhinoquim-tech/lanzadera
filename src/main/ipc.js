@@ -179,6 +179,7 @@ function register(ctx) {
   handle('sys:stats', () => stats());
   ipcMain.on('metrics:subscribe', (e, on) => ctx.metrics.subscribe(e.sender, !!on));
   handle('metrics:snapshot', () => ctx.metrics.snapshot());
+  handle('sensors:cpu', () => ctx.cpuSensors.check());
   ipcMain.on('monitor:resize', (e, height) => {
     const w = BrowserWindow.fromWebContents(e.sender);
     if (!w || w.isDestroyed() || w !== ctx.monitor.gadget) return;
